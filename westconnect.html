@@ -44,6 +44,7 @@
             color:white; padding:12px 16px; font-size:14px;
             display:flex; justify-content:space-between; align-items:center;
             position:sticky; top:0; z-index:100; box-shadow:0 2px 4px rgba(0,0,0,0.1);
+        .back-btn { background:none; border:none; color:white; font-size:22px; cursor:pointer; padding:4px 8px; display:none; -webkit-tap-highlight-color:transparent; }
         }
         .status-info { display:flex; gap:8px; align-items:center; }
         .connection-indicator {
@@ -243,6 +244,7 @@
 <div class="app-container">
     <!-- Status Bar -->
     <div class="status-bar">
+        <button class="back-btn" id="backBtn" onclick="goBack()">&#x2190;</button>
         <div class="status-info">
             <span class="connection-indicator" id="connectionIndicator"></span>
             <span id="statusText">Online</span>
@@ -849,6 +851,7 @@ const WC_BASEMENT = [
     { id:'wc_hochzeit', label:'Hochzeit: Conexion GF-AP \u2194 GF-GV (patchkabel en canal)', req:true },
     { id:'wc_gv_interior', label:'Interior GF-GV (kassettes, empalmes, puertos)', req:true },
     { id:'wc_gv_cerrado', label:'GF-GV cerrado', req:true },
+    { id:'wc_leitungsweg_keller', label:'Leitungsweg im Keller (recorrido cable en sotano)', req:true },
 ];
 
 // Per-WE photos — 'variants' = array of variant keys where this photo applies, or 'all'
@@ -1569,6 +1572,31 @@ function collectFormData() {
     return data;
 }
 
+
+// Confirmation screen after submit
+function goBack() {
+    const form = document.getElementById('fieldForm');
+    const formScreen = document.getElementById('formScreen');
+    const citaScreen = document.getElementById('citaScreen');
+    if (formScreen && formScreen.classList.contains('active')) {
+        formScreen.classList.remove('active');
+        if (citaScreen) citaScreen.classList.add('active');
+        document.getElementById('backBtn').style.display = 'none';
+    } else { location.reload(); }
+}
+
+function showSubmitConfirmation(online) {
+    const app = document.querySelector('.app-container');
+    const msg = online ? (state.lang==='de' ? 'Bericht erfolgreich gesendet!' : 'Reporte enviado exitosamente!') : (state.lang==='de' ? 'Gespeichert. Wird automatisch gesendet wenn Verbindung besteht.' : 'Guardado. Se enviara automaticamente cuando haya conexion.');
+    const icon = online ? '✅' : '📱';
+    app.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center;background:white;">' +
+        '<div style="font-size:64px;margin-bottom:20px;">' + icon + '</div>' +
+        '<h2 style="color:var(--primary-dark);margin-bottom:12px;">' + msg + '</h2>' +
+        '<p style="color:var(--text-secondary);margin-bottom:32px;">' + (state.lang==='de' ? 'Bitte nicht erneut senden.' : 'No es necesario enviar de nuevo.') + '</p>' +
+        '<button onclick="location.reload()" style="padding:14px 32px;font-size:16px;font-weight:600;background:var(--primary);color:white;border:none;border-radius:8px;cursor:pointer;">' + (state.lang==='de' ? 'Neuer Bericht' : 'Nuevo reporte') + '</button>' +
+        '</div>';
+}
+
 async function handleSubmit() {
     if (!validate()) return;
     const valResult = computeValidationScore();
@@ -1608,18 +1636,16 @@ async function doSubmit() {
             }
 
             saveSubmission(formData);
-            document.getElementById('successModal').classList.add('show');
-            setTimeout(() => { document.getElementById('successModal').classList.remove('show'); resetForm(); }, 2500);
+            showSubmitConfirmation(true);
         } catch(e) {
             formData.pendingSync = true;
             saveSubmission(formData);
-            showAlert(t('connError'), 'warning');
+            showSubmitConfirmation(false);
         }
     } else {
         formData.pendingSync = true;
         saveSubmission(formData);
-        showAlert(t('savedOffline'), 'warning');
-        setTimeout(resetForm, 1500);
+        showSubmitConfirmation(false);
     }
     btn.disabled = false; btn.textContent = t('sendBtn');
 }
@@ -1971,6 +1997,8 @@ function showScreen(id) {
     document.getElementById(id).classList.add('active');
     const ba = document.getElementById('bottomActions');
     ba.classList.toggle('hidden', id !== 'formScreen');
+    const backBtn = document.getElementById('backBtn');
+    if (backBtn) backBtn.style.display = (id === 'formScreen' || id === 'historyScreen') ? 'block' : 'none';
 }
 
 function showHistory() {

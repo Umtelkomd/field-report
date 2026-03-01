@@ -51,7 +51,10 @@ with open('/tmp/cal_team_json.json') as f:
 try:
     with open('/tmp/assignments.json') as f:
         assign_data = json.load(f)
-    assignments = {a['id']: a for a in assign_data.get('citas', []) if a.get('id')}
+    assign_list = assign_data.get('citas', [])
+    assignments = {a['id']: a for a in assign_list if a.get('id')}
+    # Also index by HA for fallback matching
+    assignments_by_ha = {a.get('ha',''): a for a in assign_list if a.get('ha')}
 except Exception:
     assignments = {}
 
@@ -60,7 +63,7 @@ events = raw if isinstance(raw, list) else raw.get('items', raw.get('events', []
 seen, citas = set(), []
 for e in events:
     title = e.get('summary', '')
-    if not re.search(r'TK.*Umtelkomd.*Install.*HA', title, re.I):
+    if not re.search(r'TK.*Umtel[ck]o?md.*Install.*HA', title, re.I):
         continue
 
     start_raw = e.get('start', {})
@@ -78,19 +81,40 @@ for e in events:
     location = e.get('location', '') or ''
     loc_m = re.match(r'^(.+),\s*(\d{5})\s+([^,]+)', location)
 
-    # Merge asignaciones del Sheet si existen
-    a = assignments.get(uid, {})
+    # Fallback: extract address from title when location is empty
+    calle, cp, ciudad = '', '', ''
+    if loc_m:
+        calle = loc_m.group(1).strip()
+        cp = loc_m.group(2)
+        ciudad = loc_m.group(3).replace(', Deutschland', '').strip()
+    elif not location:
+        title_addr = re.search(r'HA\d+[-\s]+(\d{5})\s+(\w+(?:\s+\w+)*?)\s{2,}(.+?)$', title)
+        if title_addr:
+            cp = title_addr.group(1)
+            ciudad = title_addr.group(2).strip()
+            calle = title_addr.group(3).strip()
+
+    # TK count fallback: try "N TK" anywhere in title if not at start
+    tecnicos = int(tk_m.group(1)) if tk_m else 0
+    if not tecnicos:
+        tk_any = re.search(r'(\d+)\s*TK', title, re.I)
+        if tk_any:
+            tecnicos = int(tk_any.group(1))
+
+    # Merge asignaciones del Sheet si existen (by ID or by HA)
+    ha_key = f"HA{ha_n}" if ha_m else ''
+    a = assignments.get(uid, assignments_by_ha.get(ha_key, {}))
 
     citas.append({
         "id":       uid,
         "fecha":    start[:10],
         "ha":       f"HA{ha_n}" if ha_m else title[:30],
-        "tecnicos": int(tk_m.group(1)) if tk_m else 0,
+        "tecnicos": tecnicos,
         "inicio":   start[11:16] if len(start) > 15 else '',
         "fin":      end[11:16]   if len(end)   > 15 else '',
-        "calle":    loc_m.group(1).strip() if loc_m else location,
-        "cp":       loc_m.group(2) if loc_m else '',
-        "ciudad":   loc_m.group(3).replace(', Deutschland', '').strip() if loc_m else '',
+        "calle":    calle or location,
+        "cp":       cp,
+        "ciudad":   ciudad,
         "titulo":   title,
         # Preservar asignación si existe, si no → libre
         "equipo":   a.get("equipo", ""),
