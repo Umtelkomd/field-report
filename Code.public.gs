@@ -523,16 +523,16 @@ function uploadProtocols(data) {
 
 function sendSlackNotification(data, photoResult) {
   const statusConfig = {
-    'completed-ok': { emoji: '✅', label: 'FINALIZADA OK', color: '#00C853' },
-    'client-absent': { emoji: '⚠️', label: 'CLIENTE AUSENTE', color: '#FF9800' },
-    'previous-states': { emoji: '⚠️', label: 'ESTADOS PREVIOS', color: '#FF9800' },
-    'client-reschedule': { emoji: '🔄', label: 'CLIENTE RECITAR', color: '#2196F3' },
-    'on-hold': { emoji: '🔴', label: 'PARALIZADA', color: '#F44336' },
-    'preinstalled': { emoji: '📦', label: 'PREINSTALADA', color: '#9C27B0' },
-    'completed-not-ok': { emoji: '❌', label: 'FINALIZADA NO OK', color: '#D32F2F' }
+    'completed-ok': { emoji: ':white_check_mark:', label: 'FINALIZADA OK', color: '#00C853' },
+    'client-absent': { emoji: ':warning:', label: 'CLIENTE AUSENTE', color: '#FF9800' },
+    'previous-states': { emoji: ':warning:', label: 'ESTADOS PREVIOS', color: '#FF9800' },
+    'client-reschedule': { emoji: ':arrows_counterclockwise:', label: 'CLIENTE RECITAR', color: '#2196F3' },
+    'on-hold': { emoji: ':red_circle:', label: 'PARALIZADA', color: '#F44336' },
+    'preinstalled': { emoji: ':package:', label: 'PREINSTALADA', color: '#9C27B0' },
+    'completed-not-ok': { emoji: ':x:', label: 'FINALIZADA NO OK', color: '#D32F2F' }
   };
 
-  const status = statusConfig[data.workStatus] || { emoji: '📋', label: data.workStatus, color: '#757575' };
+  const status = statusConfig[data.workStatus] || { emoji: ':clipboard:', label: data.workStatus, color: '#757575' };
   const clientName = data.client === 'glasfaser-plus' ? 'Glasfaser Plus' : 'Westconnect';
 
   const fields = [
@@ -561,7 +561,7 @@ function sendSlackNotification(data, photoResult) {
   };
 
   try {
-    UrlFetchApp.fetch(CONFIG.SLACK_WEBHOOK_URL, { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true });
+    UrlFetchApp.fetch(CONFIG.SLACK_WEBHOOK_URL, { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true, charset: 'UTF-8' });
   } catch (error) {
     Logger.log('Error enviando a Slack: ' + error.toString());
   }
@@ -914,7 +914,7 @@ function testCitasHoy() {
 function _notifySlackCita(event, info) {
   try {
     const msgs = {
-      asignada: `📋 *Cita asignada* — ${info.ha} → *${info.equipo}* a las ${info.inicio}`
+      asignada: `:clipboard: Cita asignada ,HA ${info.ha} ,equipo *${info.equipo}* a las ${info.inicio}`
     };
     if (!msgs[event] || !CONFIG.SLACK_WEBHOOK_URL.startsWith('https')) return;
     UrlFetchApp.fetch(CONFIG.SLACK_WEBHOOK_URL, {

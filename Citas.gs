@@ -320,12 +320,12 @@ function testCitasHoy() {
 function _notifySlackCita(event, info) {
   try {
     const msgs = {
-      asignada: `📋 *Cita asignada* — ${info.ha} → *${info.equipo}* a las ${info.inicio}`
+      asignada: `:clipboard: Cita asignada ,HA ${info.ha} ,equipo *${info.equipo}* a las ${info.inicio}`
     };
     if (!msgs[event] || !CONFIG.SLACK_WEBHOOK_URL.startsWith('https')) return;
     UrlFetchApp.fetch(CONFIG.SLACK_WEBHOOK_URL, {
       method: 'post', contentType: 'application/json',
-      payload: JSON.stringify({ text: msgs[event] }), muteHttpExceptions: true
+      payload: JSON.stringify({ text: msgs[event] }), muteHttpExceptions: true, charset: 'UTF-8'
     });
   } catch (_) {}
 }
