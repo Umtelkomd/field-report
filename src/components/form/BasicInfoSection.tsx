@@ -60,7 +60,9 @@ export function BasicInfoSection() {
         >
           <option value="">{t('noSupport')}</option>
           {supportTeams.map((st) => (
-            <option key={st.name} value={st.name}>{st.name}</option>
+            <option key={st.name} value={st.name}>
+              {st.name}{st.members.length > 0 ? ` — ${st.members.join(', ')}` : ''}
+            </option>
           ))}
         </select>
       </FormField>
