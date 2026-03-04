@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useTranslation } from '../../hooks/useTranslation'
 import { ADMIN_PIN } from '../../lib/constants'
@@ -12,57 +12,82 @@ const KEYS = [
 
 export function PinEntry() {
   const { t } = useTranslation()
-  const { pin, setPin, teamsMap, configLoaded, setCurrentTeam, setView, addToast } =
-    useAppStore()
+  const { teamsMap, configLoaded, setCurrentTeam, setView, addToast } = useAppStore()
+  const [digits, setDigits] = useState('')
   const [shake, setShake] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const pendingPin = useRef<string | null>(null)
+
+  // Navigate with a validated PIN
+  const navigate = useCallback(
+    (pin: string) => {
+      if (pin === ADMIN_PIN) {
+        setView('admin')
+        return
+      }
+      const team = teamsMap[pin]
+      if (!team) {
+        addToast(t('invalidPin'), 'error')
+        setShake(true)
+        setTimeout(() => setShake(false), 500)
+        return
+      }
+      setCurrentTeam(team)
+      if (team.members.length > 0) {
+        setView('member')
+      } else {
+        setView('form')
+      }
+    },
+    [teamsMap, setCurrentTeam, setView, addToast, t]
+  )
+
+  // When config loads and there's a pending PIN, process it
+  useEffect(() => {
+    if (configLoaded && pendingPin.current !== null) {
+      const pin = pendingPin.current
+      pendingPin.current = null
+      setChecking(false)
+      navigate(pin)
+    }
+  }, [configLoaded, navigate])
 
   const handleKey = useCallback(
     (key: string) => {
+      if (checking) return // don't accept input while waiting for config
       if (key === 'del') {
-        setPin(pin.slice(0, -1))
+        setDigits((d) => d.slice(0, -1))
         return
       }
-      if (key === '' || pin.length >= 4) return
-      const next = pin + key
-      setPin(next)
+      if (key === '' || digits.length >= 4) return
+
+      const next = digits + key
+      setDigits(next)
 
       if (next.length === 4) {
-        const tryNavigate = (pinToTry: string, attempt = 0) => {
-          if (!configLoaded) {
-            // Config still loading — retry up to 10 times (5 seconds total)
-            if (attempt < 10) {
-              setTimeout(() => tryNavigate(pinToTry, attempt + 1), 500)
-            } else {
-              // Timeout: use fallback teams already loaded
-              addToast('Cargando config...', 'info')
+        // Clear display immediately
+        setTimeout(() => setDigits(''), 200)
+
+        if (!configLoaded) {
+          // Config still loading — hold PIN until it arrives (max 5s)
+          setChecking(true)
+          pendingPin.current = next
+          const timeout = setTimeout(() => {
+            if (pendingPin.current !== null) {
+              pendingPin.current = null
+              setChecking(false)
+              addToast('No se pudo cargar la configuración', 'error')
             }
-            return
-          }
-          if (pinToTry === ADMIN_PIN) {
-            setView('admin')
-            setPin('')
-            return
-          }
-          const team = teamsMap[pinToTry]
-          if (!team) {
-            addToast(t('invalidPin'), 'error')
-            setShake(true)
-            setTimeout(() => setShake(false), 500)
-            setPin('')
-            return
-          }
-          setCurrentTeam(team)
-          setPin('')
-          if (team.members.length > 0) {
-            setView('member')
-          } else {
-            setView('form')
-          }
+          }, 5000)
+          // Store timeout id for cleanup (not critical)
+          return () => clearTimeout(timeout)
         }
-        setTimeout(() => tryNavigate(next), 250)
+
+        // Config ready — navigate immediately
+        setTimeout(() => navigate(next), 200)
       }
     },
-    [pin, setPin, teamsMap, configLoaded, setCurrentTeam, setView, addToast, t]
+    [digits, checking, configLoaded, navigate, addToast]
   )
 
   return (
@@ -80,15 +105,19 @@ export function PinEntry() {
 
       {/* Middle: PIN display + label */}
       <div className="flex flex-col items-center">
-        <p className="mb-5 text-[13px] font-medium text-gray-500">{t('pinLabel')}</p>
+        <p className="mb-5 text-[13px] font-medium text-gray-500">
+          {checking ? 'Verificando...' : t('pinLabel')}
+        </p>
         <div className={`mb-2 flex gap-4 ${shake ? 'animate-shake' : ''}`}>
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
               className={`flex h-4 w-4 items-center justify-center rounded-full transition-all duration-200 ${
-                i < pin.length
-                  ? 'scale-110 bg-brand-500 shadow-glow'
-                  : 'bg-gray-200'
+                checking
+                  ? 'animate-pulse bg-brand-300'
+                  : i < digits.length
+                    ? 'scale-110 bg-brand-500 shadow-glow'
+                    : 'bg-gray-200'
               }`}
             />
           ))}
@@ -105,13 +134,15 @@ export function PinEntry() {
                   key={ki}
                   type="button"
                   onClick={() => handleKey(key)}
-                  disabled={key === ''}
+                  disabled={key === '' || checking}
                   className={`flex h-[64px] w-[80px] items-center justify-center rounded-2xl text-[22px] font-semibold transition-all ${
                     key === ''
                       ? 'invisible'
                       : key === 'del'
                         ? 'bg-gray-100 text-gray-500 active:bg-gray-200'
-                        : 'bg-white text-gray-800 shadow-card active:scale-95 active:bg-gray-50'
+                        : checking
+                          ? 'bg-gray-50 text-gray-300'
+                          : 'bg-white text-gray-800 shadow-card active:scale-95 active:bg-gray-50'
                   }`}
                 >
                   {key === 'del' ? (
