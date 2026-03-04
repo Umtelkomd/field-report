@@ -129,7 +129,6 @@ export function PhotoField({ fieldId, label, required }: Props) {
         ref={imgInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
         className="hidden"
         onChange={(e) => e.target.files && handleFiles(e.target.files).then(() => { e.target.value = '' })}
