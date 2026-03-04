@@ -9,22 +9,16 @@ export function BasicInfoSection() {
   const formData = useAppStore((s) => s.formData)
   const setFormField = useAppStore((s) => s.setFormField)
   const teamConfigs = useAppStore((s) => s.teamConfigs)
-  const needsEvidence = [
-    'client-absent', 'previous-states', 'client-reschedule', 'on-hold', 'completed-not-ok',
-  ].includes(formData.workStatus || '')
+  const needsEvidence = ['client-absent', 'client-reschedule'].includes(formData.workStatus || '')
 
   const supportTeams = teamConfigs.filter(
     (tc) => tc.client === currentTeam?.client && tc.name !== currentTeam?.name
   )
 
   const statuses: { value: WorkStatus; labelKey: string }[] = [
-    { value: 'completed-ok', labelKey: 'statusOk' },
+    { value: 'completed-ok', labelKey: 'statusFinalizado' },
+    { value: 'client-reschedule', labelKey: 'statusSegundaCita' },
     { value: 'client-absent', labelKey: 'statusAbsent' },
-    { value: 'previous-states', labelKey: 'statusPrevious' },
-    { value: 'client-reschedule', labelKey: 'statusReschedule' },
-    { value: 'on-hold', labelKey: 'statusHold' },
-    { value: 'preinstalled', labelKey: 'statusPreinstalled' },
-    { value: 'completed-not-ok', labelKey: 'statusNotOk' },
   ]
 
   return (
