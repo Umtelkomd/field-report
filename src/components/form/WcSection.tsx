@@ -66,9 +66,9 @@ export function WcSection() {
   const numWe = parseInt(formData.units || '0') || 0
   const [activeWe, setActiveWe] = useState(1)
 
-  // Primera / Segunda cita toggle
+  // Primera / Segunda cita — toggle manual O status seleccionado
   const visitType = formData.visitType || 'primera'
-  const isSegunda = visitType === 'segunda'
+  const isSegunda = visitType === 'segunda' || formData.workStatus === 'client-reschedule'
 
   // Dynamic photo slots for segunda cita
   const [photoSlots, setPhotoSlots] = useState<Array<{id: string; desc: string}>>([
@@ -232,7 +232,7 @@ export function WcSection() {
       </section>
 
       {/* SEGUNDA CITA — Observaciones + fotos ilimitadas con descripción */}
-      {isSegunda && isFinalized && (
+      {isSegunda && !!formData.workStatus && (
         <section className="section-card">
           <h3 className="mb-3 text-[15px] font-extrabold text-gray-900">Segunda Cita</h3>
           <div className="mb-4">
