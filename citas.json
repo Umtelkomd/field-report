@@ -1,36 +1,6 @@
 {
-  "generated": "2026-03-03T23:40:55.581735",
+  "generated": "2026-03-04T06:01:23.771635",
   "citas": [
-    {
-      "id": "2026-03-03_764742",
-      "fecha": "2026-03-03",
-      "ha": "HA764742",
-      "tecnicos": 4,
-      "inicio": "08:00",
-      "fin": "17:00",
-      "calle": "Wolbecker Str. 298",
-      "cp": "48155",
-      "ciudad": "Münster",
-      "titulo": "4 TK Umtelkomd - Installation - HA764742",
-      "equipo": "West-002",
-      "status": "capturada",
-      "linkDocs": ""
-    },
-    {
-      "id": "2026-03-03_306125",
-      "fecha": "2026-03-03",
-      "ha": "HA306125",
-      "tecnicos": 3,
-      "inicio": "08:00",
-      "fin": "17:00",
-      "calle": "Große Str. 12",
-      "cp": "49584",
-      "ciudad": "Fürstenau",
-      "titulo": "3 TK Umtelkomd - Installation - HA306125",
-      "equipo": "West-001",
-      "status": "capturada",
-      "linkDocs": ""
-    },
     {
       "id": "2026-03-04_488698",
       "fecha": "2026-03-04",
@@ -42,8 +12,8 @@
       "cp": "33428",
       "ciudad": "Harsewinkel",
       "titulo": "3 TK Umtelkomd - Installation - HA488698",
-      "equipo": "",
-      "status": "libre",
+      "equipo": "West-001",
+      "status": "asignada",
       "linkDocs": ""
     },
     {
@@ -57,8 +27,8 @@
       "cp": "48155",
       "ciudad": "Münster",
       "titulo": "4 TK Umtelkomd - Installation - HA764743",
-      "equipo": "",
-      "status": "libre",
+      "equipo": "West-004",
+      "status": "asignada",
       "linkDocs": ""
     },
     {
@@ -267,6 +237,36 @@
       "cp": "49143",
       "ciudad": "Bissendorf",
       "titulo": "2 TK Umtelkomd - Installation - HA755194",
+      "equipo": "",
+      "status": "libre",
+      "linkDocs": ""
+    },
+    {
+      "id": "2026-03-12_410135",
+      "fecha": "2026-03-12",
+      "ha": "HA410135",
+      "tecnicos": 4,
+      "inicio": "08:00",
+      "fin": "17:00",
+      "calle": "August-Dissen-Straße 21",
+      "cp": "34414",
+      "ciudad": "Warburg",
+      "titulo": "4 TK Umtelkomd - Installation - HA410135",
+      "equipo": "",
+      "status": "libre",
+      "linkDocs": ""
+    },
+    {
+      "id": "2026-03-12_899208",
+      "fecha": "2026-03-12",
+      "ha": "HA899208",
+      "tecnicos": 2,
+      "inicio": "08:00",
+      "fin": "15:00",
+      "calle": "Breitensiek 14",
+      "cp": "32549",
+      "ciudad": "Bad Oeynhausen",
+      "titulo": "2 TK Umtelkomd - Installation - HA899208",
       "equipo": "",
       "status": "libre",
       "linkDocs": ""
