@@ -27,17 +27,23 @@ export function PinEntry() {
       setPin(next)
 
       if (next.length === 4) {
-        setTimeout(() => {
+        const tryNavigate = (pinToTry: string, attempt = 0) => {
           if (!configLoaded) {
-            setTimeout(() => handleKey(''), 500)
+            // Config still loading — retry up to 10 times (5 seconds total)
+            if (attempt < 10) {
+              setTimeout(() => tryNavigate(pinToTry, attempt + 1), 500)
+            } else {
+              // Timeout: use fallback teams already loaded
+              addToast('Cargando config...', 'info')
+            }
             return
           }
-          if (next === ADMIN_PIN) {
+          if (pinToTry === ADMIN_PIN) {
             setView('admin')
             setPin('')
             return
           }
-          const team = teamsMap[next]
+          const team = teamsMap[pinToTry]
           if (!team) {
             addToast(t('invalidPin'), 'error')
             setShake(true)
@@ -46,13 +52,14 @@ export function PinEntry() {
             return
           }
           setCurrentTeam(team)
+          setPin('')
           if (team.members.length > 0) {
             setView('member')
           } else {
             setView('form')
           }
-          setPin('')
-        }, 250)
+        }
+        setTimeout(() => tryNavigate(next), 250)
       }
     },
     [pin, setPin, teamsMap, configLoaded, setCurrentTeam, setView, addToast, t]
