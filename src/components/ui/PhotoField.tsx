@@ -4,6 +4,9 @@ import { useAppStore } from '../../store/appStore'
 import { compressPhoto, checkPhotoQuality } from '../../lib/photoUtils'
 import { useTranslation } from '../../hooks/useTranslation'
 
+// Stable empty array — avoids new reference on every render in Zustand selector
+const EMPTY: string[] = []
+
 interface Props {
   fieldId: string
   label: string
@@ -12,8 +15,8 @@ interface Props {
 
 export function PhotoField({ fieldId, label, required }: Props) {
   const { t } = useTranslation()
-  const photos = useAppStore((s) => s.photos[fieldId] || [])
-  const quality = useAppStore((s) => s.photoQuality[fieldId] || [])
+  const photos = useAppStore((s) => s.photos[fieldId] ?? EMPTY)
+  const quality = useAppStore((s) => s.photoQuality[fieldId] ?? EMPTY)
   const addPhoto = useAppStore((s) => s.addPhoto)
   const removePhoto = useAppStore((s) => s.removePhoto)
   const inputRef = useRef<HTMLInputElement>(null)

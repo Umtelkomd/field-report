@@ -12,7 +12,11 @@ const KEYS = [
 
 export function PinEntry() {
   const { t } = useTranslation()
-  const { teamsMap, configLoaded, setCurrentTeam, setView, addToast } = useAppStore()
+  const teamsMap = useAppStore((s) => s.teamsMap)
+  const configLoaded = useAppStore((s) => s.configLoaded)
+  const setCurrentTeam = useAppStore((s) => s.setCurrentTeam)
+  const setView = useAppStore((s) => s.setView)
+  const addToast = useAppStore((s) => s.addToast)
   const [digits, setDigits] = useState('')
   const [shake, setShake] = useState(false)
   const [checking, setChecking] = useState(false)

@@ -42,17 +42,16 @@ export function WcSection() {
 
   const haFormatOk = /^HA\d+$/i.test(formData.ha || '')
 
+  const photos = useAppStore((s) => s.photos)
   const basementFilled = useMemo(
-    () => WC_BASEMENT.filter((p) => p.required && hasPhoto(p.id)).length,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hasPhoto, formData]
+    () => WC_BASEMENT.filter((p) => p.required && !!photos[p.id]?.length).length,
+    [photos]
   )
   const basementReq = WC_BASEMENT.filter((p) => p.required).length
 
   const exteriorFilled = useMemo(
-    () => WC_EXTERIOR.filter((p) => p.required && hasPhoto(p.id)).length,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [hasPhoto, formData]
+    () => WC_EXTERIOR.filter((p) => p.required && !!photos[p.id]?.length).length,
+    [photos]
   )
   const exteriorReq = WC_EXTERIOR.filter((p) => p.required).length
 
