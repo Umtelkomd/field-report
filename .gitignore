@@ -1,10 +1,15 @@
+node_modules
+dist
+*.local
 *.backup
 .DS_Store
-*.txt
-*.md
 Code.gs
 nexus_logo_transparent.png
 dashboard.html
+_legacy
+
 # Allow docs/ folder
 !docs/*.pdf
 !docs/*.xlsx
+# Allow CLAUDE.md
+!CLAUDE.md

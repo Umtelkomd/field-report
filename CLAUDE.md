@@ -1,53 +1,71 @@
-# CLAUDE.md — WestConnect Field Report
+# CLAUDE.md — Field Report App
 
 ## What Is This?
-Appointment management system for fiber installation teams. Static HTML pages + auto-generated `citas.json`.
+PWA for fiber installation field technicians. Dual-client (Glasfaser Plus + Westconnect) form submission with photo capture, offline sync, and admin dashboard.
+
+## Stack
+- React 18, Vite 5, TypeScript 5, Tailwind CSS 3, Zustand 5
+- vite-plugin-pwa (Workbox autoUpdate)
+- No routing library — Zustand `view` state (linear flow)
 
 ## Repo & Deploy
 - **Local:** `~/Dev/field-report/`
-- **GitHub:** jarl9801/field-report (public)
+- **GitHub:** jarl9801/field-report
 - **Live:** https://jarl9801.github.io/field-report/
-- **Deploy:** `git add -A && git commit -m "..." && git push` (GitHub Pages auto-deploys)
+- **Deploy:** Push to `main` → GitHub Actions builds & deploys to Pages
+- **CI:** `.github/workflows/deploy.yml` — `npm ci && npm run build && cp citas.json dist/`
 
 ## Architecture
 ```
-Google Calendar (Umtelkomd team)
-        ↓ (gog CLI)
-  sync_citas.sh (cron every 15min by LobsterOps)
-        ↓
-  citas.json (committed + pushed to GitHub)
-        ↓
-  admin.html / westconnect.html (read citas.json directly)
+src/
+├── main.tsx, App.tsx, index.css
+├── types/index.ts              # All TS interfaces + constants
+├── store/appStore.ts           # Zustand: nav, auth, form, submissions, UI
+├── lib/
+│   ├── api.ts                  # Apps Script client (all endpoints)
+│   ├── db.ts                   # IndexedDB (FieldReportV2) + migration
+│   ├── i18n.ts                 # ES/DE translations (~160 keys)
+│   ├── photoUtils.ts           # Compress + blur/dark/overexposed detection
+│   ├── validation.ts           # Weighted scoring (basic/HA/photos/checklist/protocols/comments)
+│   └── constants.ts            # Script URL, DB config, thresholds, admin PIN
+├── data/
+│   ├── gfpPhotos.ts            # GFP photo requirements by building type
+│   ├── wcPhotos.ts             # WC photos: basement + per-WE + exterior
+│   └── ne4Checklist.ts         # 19 NE4 items with categories
+├── hooks/
+│   ├── useTranslation.ts       # i18n hook wrapping Zustand lang
+│   ├── useOnline.ts            # Online/offline boolean
+│   ├── useSync.ts              # Retry pending submissions with backoff
+│   └── usePhotoCapture.ts      # Camera/gallery + compress + quality
+└── components/
+    ├── layout/StatusBar.tsx     # Top bar: back, connection, lang toggle
+    ├── ui/                     # PinEntry, MemberSelect, PhotoField, Modal, Toast
+    ├── form/                   # BasicInfoSection, GfpSection, WcSection, EvidenceSection, ValidationScoreCard
+    ├── views/                  # TechView (form orchestrator), HistoryView, AdminView
+    └── citas/                  # CitasScreen, CitaCard
 ```
 
-**`citas.json` is the SOLE source of truth** — admin.html reads it directly, no Apps Script for reads.
+## User Flow
+- **GFP:** PIN → Member → Form → Submit
+- **WC:** PIN → Member → Citas → Form → Submit
+- **Admin:** PIN 0223 → Admin Dashboard
 
-## Key Files
-| File | Purpose |
-|------|---------|
-| `citas.json` | All appointments — auto-generated, DO NOT edit manually |
-| `admin.html` | Admin view: grouped by date, assign teams (PIN: **0223**) |
-| `westconnect.html` | Tech view: shows citas for logged-in team only |
-| `scripts/sync_citas.sh` | Cron script: calendar → citas.json |
+## Backend (Not in this repo)
+- **Apps Script URL:** `https://script.google.com/macros/s/AKfycbz6YI1Oh-tutU3q5NfPJxDq77QKDMVX6DtM92YZ_GxgKYqm0XXymVCOi08k4SuDteXr/exec`
+- **Writes use GET** (not POST) — POST triggers Google auth redirect for assignCita/updateCitaStatus
+- `citas.json` auto-synced from Google Calendar via `scripts/sync_citas.sh` (cron by LobsterOps)
 
-## sync_citas.sh Details
-- Reads calendar via `gog calendar events --json --limit 50 --days 14`
-- Calendar ID: `a400089061a6fa2a053b8e3e3d1236767b2b97a5d5173b2e4d1f1734a5337ee0@group.calendar.google.com`
-- Filters events matching: `TK.*Umtel[ck]o?md.*Install.*HA` (handles Umtelkomd/Umtelcomd typo)
-- Fetches existing assignments from Apps Script (per-date GET requests)
-- **Dual-key merge:** matches by `uid` AND by HA number (handles UUID vs date_ha ID mismatch)
-- Commits and pushes citas.json automatically
+## Key Patterns
+- Zustand selectors: `useAppStore((s) => s.fieldName)` — avoid full store subscriptions
+- Photos stored as base64 data URLs in Zustand + IndexedDB
+- Offline-first: save to IndexedDB first, mark `pendingSync`, retry on reconnect
+- Validation score: only computed for WC finalized orders (weighted 100-point system)
+- i18n: `t('key')` returns string, `TranslationKey` type for compile-time safety
+- Form data stored as `Record<string, string>` for flexibility
 
-## Apps Script
-- **URL:** `https://script.google.com/macros/s/AKfycbz6YI1Oh-tutU3q5NfPJxDq77QKDMVX6DtM92YZ_GxgKYqm0XXymVCOi08k4SuDteXr/exec`
-- **Writes use GET** (not POST) — POST triggers Google auth redirect
-- Used for team assignments only; reads come from citas.json
-
-## Status Values
-- Active: pending, assigned
-- Done: `completada`, `no_asistio`, `reagendada`, `cancelada`
-- Constant: `DONE_STATUS = ['completada', 'no_asistio', 'reagendada', 'cancelada']`
-
-## Views
-- **Admin** (`admin.html`): PIN-protected, groups citas by date, drag-assign teams
-- **Tech** (`westconnect.html`): Team login, shows only their citas, auto-advances to next day with assignments
+## Commands
+```bash
+npm run dev      # Dev server (localhost:5173)
+npm run build    # tsc + vite build → dist/
+npm run preview  # Preview production build
+```
