@@ -109,13 +109,11 @@ export function formatDuration(mins: number): string {
 }
 
 export async function fetchCitasByTeam(team: string, date: string): Promise<Cita[]> {
-  // getLiveCitas returns all citas; we filter by team client-side
-  const resp = await fetch(
-    `${GOOGLE_SCRIPT_URL}?action=getLiveCitas&date=${date}`
-  )
+  // Read from citas.json (GitHub Pages) — equipo assignments are stored there
+  const resp = await fetch('citas.json?t=' + Date.now())
   const data = await resp.json()
   return (data.citas || [])
-    .filter((c: Record<string, unknown>) => c.equipo === team)
+    .filter((c: Record<string, unknown>) => c.fecha === date && c.equipo === team)
     .map((c: Record<string, unknown>) => ({
       ...c,
       calle: c.calle || c.direccion || '',
