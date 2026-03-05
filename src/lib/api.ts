@@ -1,5 +1,5 @@
 import { GOOGLE_SCRIPT_URL } from './constants'
-import type { TeamConfig, ClientType, Cita, Report, Submission } from '../types'
+import type { TeamConfig, Cita, Report, Submission } from '../types'
 
 interface ConfigResponse {
   teams: Array<{
@@ -15,12 +15,9 @@ export async function fetchConfig(): Promise<TeamConfig[]> {
     const resp = await fetch(GOOGLE_SCRIPT_URL + '?action=getConfig')
     const data: ConfigResponse = await resp.json()
     if (data.teams && data.teams.length > 0) {
-      return data.teams.map((t) => {
-        let cl: ClientType = 'glasfaser-plus'
-        const raw = (t.client || '').toLowerCase()
-        if (raw.includes('westconnect')) cl = 'westconnect'
-        return { pin: t.pin, name: t.name, client: cl, members: t.members || [] }
-      })
+      return data.teams
+        .filter((t) => (t.client || '').toLowerCase().includes('westconnect'))
+        .map((t) => ({ pin: t.pin, name: t.name, members: t.members || [] }))
     }
   } catch (e) {
     console.error('Config load error:', e)
@@ -30,21 +27,18 @@ export async function fetchConfig(): Promise<TeamConfig[]> {
 
 function fallbackTeams(): TeamConfig[] {
   return [
-    { pin: '1234', name: 'Plus-001', client: 'glasfaser-plus', members: ['Erick Flores'] },
     {
       pin: '2345',
       name: 'West-001',
-      client: 'westconnect',
       members: ['Alejandro Herrera', 'Alexander Herrera'],
     },
     {
       pin: '3456',
       name: 'West-002',
-      client: 'westconnect',
       members: ['Juan Correa', 'Eddier Aldana'],
     },
-    { pin: '4567', name: 'West-003', client: 'westconnect', members: ['Andrés Melgarejo'] },
-    { pin: '5678', name: 'West-004', client: 'westconnect', members: ['Michel Matos'] },
+    { pin: '4567', name: 'West-003', members: ['Andrés Melgarejo'] },
+    { pin: '5678', name: 'West-004', members: ['Michel Matos'] },
   ]
 }
 
@@ -55,8 +49,6 @@ export async function submitReport(data: Submission): Promise<boolean> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  // no-cors means opaque response, we can't read status
-  // If it didn't throw, consider it sent
   return resp.type === 'opaque' || resp.ok
 }
 
@@ -126,7 +118,6 @@ export function setLocalStatus(citaId: string, status: string): void {
 }
 
 export async function fetchCitasByTeam(team: string, date: string): Promise<Cita[]> {
-  // Read from citas.json (GitHub Pages) — equipo assignments are stored there
   const resp = await fetch('citas.json?t=' + Date.now())
   const data = await resp.json()
   const localStatuses = getLocalStatuses()
@@ -138,7 +129,6 @@ export async function fetchCitasByTeam(team: string, date: string): Promise<Cita
       cp: String(c.cp || ''),
       inicio: parseTime(c.inicio),
       fin: parseTime(c.fin),
-      // Apply local status override if exists
       status: localStatuses[c.id as string] ?? c.status,
     }))
 }
@@ -178,10 +168,7 @@ export async function updateCitaStatus(
   status: string,
   comments?: string
 ): Promise<{ success: boolean }> {
-  // Always persist locally first so UI reflects the change immediately
   setLocalStatus(citaId, status)
-
-  // Try to sync to backend in background (best-effort)
   try {
     const params = new URLSearchParams({
       action: 'updateCitaStatus',
@@ -193,6 +180,5 @@ export async function updateCitaStatus(
   } catch {
     // ignore — local status is the source of truth on the device
   }
-
   return { success: true }
 }

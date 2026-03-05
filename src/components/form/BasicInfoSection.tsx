@@ -12,7 +12,7 @@ export function BasicInfoSection() {
   const needsEvidence = ['client-absent', 'client-reschedule'].includes(formData.workStatus || '')
 
   const supportTeams = teamConfigs.filter(
-    (tc) => tc.client === currentTeam?.client && tc.name !== currentTeam?.name
+    (tc) => tc.name !== currentTeam?.name
   )
 
   const statuses: { value: WorkStatus; labelKey: string }[] = [
@@ -25,13 +25,11 @@ export function BasicInfoSection() {
     <section className="rounded-2xl bg-white p-5 shadow-card">
       <h3 className="mb-4 text-[15px] font-extrabold text-gray-900">{t('sectionBasic')}</h3>
 
-      {/* Client + Team + Tech (read-only row) */}
+      {/* Team + Tech (read-only row) */}
       <div className="mb-4 flex gap-2">
         <div className="flex-1 rounded-xl bg-gray-50 px-3 py-2.5">
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('lblClient')}</div>
-          <div className="text-[13px] font-semibold text-gray-700">
-            {currentTeam?.client === 'glasfaser-plus' ? 'GFP' : 'WC'}
-          </div>
+          <div className="text-[13px] font-semibold text-gray-700">WestConnect</div>
         </div>
         <div className="flex-1 rounded-xl bg-gray-50 px-3 py-2.5">
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('lblTeam')}</div>

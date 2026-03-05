@@ -49,7 +49,7 @@ export function HistoryView() {
               (acc, arr) => acc + arr.length,
               0
             )
-            const id = sub.ha || sub.orderNumber || ''
+            const id = sub.ha || ''
 
             return (
               <div
@@ -58,7 +58,7 @@ export function HistoryView() {
               >
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-[15px] font-bold text-gray-900">
-                    {id || (sub.client === 'westconnect' ? 'WC' : 'GFP')}
+                    {id || 'WC'}
                   </span>
                   <span
                     className="rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white"

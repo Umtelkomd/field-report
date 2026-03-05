@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import type {
   ViewName,
   Lang,
-  ClientType,
   TeamConfig,
   PhotoQuality,
   Submission,
@@ -38,7 +37,6 @@ interface AppState {
   loadConfig: () => Promise<void>
 
   // Form
-  clientType: ClientType | null
   formData: Record<string, string>
   setFormField: (key: string, value: string) => void
   photos: Record<string, string[]>
@@ -54,6 +52,9 @@ interface AppState {
   toggleChecked: (id: string) => void
   protocols: string[]
   toggleProtocol: (id: string) => void
+  protocolFiles: string[]
+  addProtocolFile: (dataUrl: string) => void
+  removeProtocolFile: (index: number) => void
   resetForm: () => void
 
   // Submissions
@@ -91,7 +92,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   configLoaded: false,
   currentTeam: null,
   currentTechnician: '',
-  setCurrentTeam: (t) => set({ currentTeam: t, clientType: t?.client || null }),
+  setCurrentTeam: (t) => set({ currentTeam: t }),
   setCurrentTechnician: (name) => set({ currentTechnician: name }),
   loadConfig: async () => {
     const teams = await fetchConfig()
@@ -101,7 +102,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Form
-  clientType: null,
   formData: {},
   setFormField: (key, value) =>
     set((s) => ({ formData: { ...s.formData, [key]: value } })),
@@ -158,6 +158,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         ? s.protocols.filter((x) => x !== id)
         : [...s.protocols, id],
     })),
+  protocolFiles: [],
+  addProtocolFile: (dataUrl) =>
+    set((s) => ({ protocolFiles: [...s.protocolFiles, dataUrl] })),
+  removeProtocolFile: (index) =>
+    set((s) => {
+      const files = [...s.protocolFiles]
+      files.splice(index, 1)
+      return { protocolFiles: files }
+    }),
   resetForm: () =>
     set({
       formData: {},
@@ -165,6 +174,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       photoQuality: {},
       checkedItems: [],
       protocols: [],
+      protocolFiles: [],
       selectedCita: null,
       weNT: {},
       weAtenuacion: {},

@@ -1,174 +1,164 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchReports, fetchCitasJson, assignCita, formatDuration } from '../../lib/api'
 import { useAppStore } from '../../store/appStore'
-import { STATUS_MAP, CITA_STATUS_DONE, CITA_STATUS_LABELS } from '../../types'
+import { STATUS_MAP, CITA_STATUS_LABELS } from '../../types'
 import type { Report, Cita } from '../../types'
 
-type Tab = 'overview' | 'citas' | 'reports' | 'teams'
-type Period = 'today' | 'week' | 'month' | 'all' | 'custom'
+type Tab = 'calendar' | 'reports' | 'teams'
+type CalView = 'day' | 'week'
+
+const TEAMS = ['West-001', 'West-002', 'West-003', 'West-004']
+
+const CITA_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  libre: { bg: '#e5e7eb', text: '#6b7280', border: '#d1d5db' },
+  asignada: { bg: '#dbeafe', text: '#2563eb', border: '#93c5fd' },
+  capturada: { bg: '#fed7aa', text: '#c2410c', border: '#fdba74' },
+  en_trabajo: { bg: '#fef08a', text: '#a16207', border: '#fde047' },
+  finalizada_ok: { bg: '#bbf7d0', text: '#15803d', border: '#86efac' },
+  finalizada_no_ok: { bg: '#fecaca', text: '#dc2626', border: '#fca5a5' },
+  cliente_ausente: { bg: '#fde68a', text: '#92400e', border: '#fcd34d' },
+  recitar: { bg: '#e9d5ff', text: '#7c3aed', border: '#c4b5fd' },
+  paralizada: { bg: '#d1d5db', text: '#4b5563', border: '#9ca3af' },
+}
+
+function getMonday(d: Date): Date {
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  const mon = new Date(d)
+  mon.setDate(diff)
+  mon.setHours(0, 0, 0, 0)
+  return mon
+}
+
+function formatDate(d: Date): string {
+  return d.toISOString().split('T')[0]
+}
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d)
+  r.setDate(r.getDate() + n)
+  return r
+}
 
 export function AdminView() {
   const teamConfigs = useAppStore((s) => s.teamConfigs)
   const addToast = useAppStore((s) => s.addToast)
 
-  const [tab, setTab] = useState<Tab>('overview')
-  const [allData, setAllData] = useState<Report[]>([])
-  const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<Tab>('calendar')
+  const [allReports, setAllReports] = useState<Report[]>([])
+  const [loadingReports, setLoadingReports] = useState(true)
 
-  // Filters
-  const [period, setPeriod] = useState<Period>('week')
-  const [filterClient, setFilterClient] = useState('')
-  const [filterTeam, setFilterTeam] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [customFrom, setCustomFrom] = useState('')
-  const [customTo, setCustomTo] = useState('')
+  // Calendar state
+  const [calView, setCalView] = useState<CalView>('week')
+  const [currentDate, setCurrentDate] = useState(() => new Date())
+  const [allCitas, setAllCitas] = useState<Cita[]>([])
+  const [citasLoading, setCitasLoading] = useState(true)
+  const [selectedCita, setSelectedCita] = useState<Cita | null>(null)
 
-  // Citas
-  const [citas, setCitas] = useState<Cita[]>([])
-  const [citasDate, setCitasDate] = useState('')
-  const [citasLoading, setCitasLoading] = useState(false)
+  // Drag state
+  const [dragCita, setDragCita] = useState<Cita | null>(null)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const reports = await fetchReports()
-        setAllData(reports)
-      } catch (e) {
-        console.error('Load error:', e)
-        addToast('Error cargando datos', 'error')
-      } finally {
-        setLoading(false)
-      }
-    }
-    void load()
-  }, [addToast])
-
-  const teams = useMemo(
-    () => [...new Set(allData.map((r) => r.team).filter(Boolean))].sort(),
-    [allData]
+  const wcTeams = useMemo(
+    () => teamConfigs.map((t) => t.name).filter((n) => n.startsWith('West-')),
+    [teamConfigs]
   )
+  const displayTeams = wcTeams.length > 0 ? wcTeams : TEAMS
 
-  const filtered = useMemo(() => {
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
-
-    return allData
-      .filter((r) => {
-        if (filterClient && r.client !== filterClient) return false
-        if (filterTeam && r.team !== filterTeam) return false
-        if (filterStatus && r.workStatus !== filterStatus) return false
-
-        if (period === 'today') return r.date === today
-        if (period === 'week') {
-          const d = new Date(r.date + 'T12:00:00')
-          const mon = new Date(now)
-          mon.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-          mon.setHours(0, 0, 0, 0)
-          const sun = new Date(mon)
-          sun.setDate(mon.getDate() + 6)
-          sun.setHours(23, 59, 59, 999)
-          return d >= mon && d <= sun
-        }
-        if (period === 'month') return r.date.startsWith(today.substring(0, 7))
-        if (period === 'custom') {
-          if (customFrom && r.date < customFrom) return false
-          if (customTo && r.date > customTo) return false
-        }
-        return true
-      })
-      .sort((a, b) => (b.timestamp || b.date).localeCompare(a.timestamp || a.date))
-  }, [allData, period, filterClient, filterTeam, filterStatus, customFrom, customTo])
-
-  // KPIs
-  const kpis = useMemo(() => {
-    const total = filtered.length
-    const ok = filtered.filter((r) => r.workStatus === 'completed-ok').length
-    const notOk = filtered.filter((r) => r.workStatus === 'completed-not-ok').length
-    const absent = filtered.filter((r) => r.workStatus === 'client-absent').length
-    const preinstalled = filtered.filter((r) => r.workStatus === 'preinstalled').length
-    const avgDuration =
-      total > 0
-        ? Math.round(filtered.reduce((s, r) => s + (r.duration || 0), 0) / total)
-        : 0
-    const successRate = total > 0 ? Math.round(((ok + preinstalled) / total) * 100) : 0
-    const uniqueDays = new Set(filtered.map((r) => r.date)).size
-    const avgPerDay = uniqueDays > 0 ? (total / uniqueDays).toFixed(1) : '0'
-    return { total, ok, notOk, absent, preinstalled, avgDuration, successRate, avgPerDay, uniqueDays }
-  }, [filtered])
-
-  // Charts data
-  const dailyData = useMemo(() => {
-    const byday: Record<string, number> = {}
-    filtered.forEach((r) => {
-      byday[r.date] = (byday[r.date] || 0) + 1
-    })
-    const days = Object.keys(byday).sort().slice(-7)
-    const max = Math.max(...days.map((d) => byday[d]), 1)
-    return days.map((d) => ({
-      date: d,
-      count: byday[d],
-      pct: Math.round((byday[d] / max) * 100),
-      label: new Date(d + 'T12:00:00').toLocaleDateString('es', {
-        weekday: 'short',
-        day: 'numeric',
-      }),
-    }))
-  }, [filtered])
-
-  const statusData = useMemo(() => {
-    const counts: Record<string, number> = {}
-    filtered.forEach((r) => {
-      const s = r.workStatus || 'unknown'
-      counts[s] = (counts[s] || 0) + 1
-    })
-    const total = filtered.length || 1
-    return Object.entries(counts).map(([status, count]) => ({
-      status,
-      count,
-      pct: Math.round((count / total) * 100),
-      label: STATUS_MAP[status]?.label || status,
-      color: STATUS_MAP[status]?.color || '#666',
-    }))
-  }, [filtered])
-
-  const teamData = useMemo(() => {
-    const byteam: Record<string, { total: number; ok: number; notOk: number; totalTime: number; techs: Record<string, { total: number; ok: number; notOk: number; totalTime: number }> }> = {}
-    filtered.forEach((r) => {
-      const t = r.team || 'Sin equipo'
-      if (!byteam[t]) byteam[t] = { total: 0, ok: 0, notOk: 0, totalTime: 0, techs: {} }
-      byteam[t].total++
-      if (r.workStatus === 'completed-ok' || r.workStatus === 'preinstalled') byteam[t].ok++
-      if (r.workStatus === 'completed-not-ok') byteam[t].notOk++
-      byteam[t].totalTime += r.duration || 0
-      const tech = r.technician?.trim() || `(${t})`
-      if (!byteam[t].techs[tech])
-        byteam[t].techs[tech] = { total: 0, ok: 0, notOk: 0, totalTime: 0 }
-      byteam[t].techs[tech].total++
-      if (r.workStatus === 'completed-ok' || r.workStatus === 'preinstalled')
-        byteam[t].techs[tech].ok++
-      if (r.workStatus === 'completed-not-ok') byteam[t].techs[tech].notOk++
-      byteam[t].techs[tech].totalTime += r.duration || 0
-    })
-    return byteam
-  }, [filtered])
-
-  // Citas admin
-  const loadCitas = useCallback(async (dateStr: string) => {
+  // Load citas
+  const loadCitas = useCallback(async () => {
     setCitasLoading(true)
     try {
       const data = await fetchCitasJson()
-      const today = new Date().toISOString().split('T')[0]
-      const all = (data.citas || []).filter((c) => c.fecha >= today)
-      setCitas(dateStr ? all.filter((c) => c.fecha === dateStr) : all)
+      setAllCitas(data.citas || [])
     } catch {
-      setCitas([])
       addToast('Error cargando citas', 'error')
     } finally {
       setCitasLoading(false)
     }
   }, [addToast])
 
-  const handleAssign = async (cita: Cita, equipo: string, linkDocs: string) => {
+  // Load reports
+  useEffect(() => {
+    async function load() {
+      try {
+        const reports = await fetchReports()
+        setAllReports(reports)
+      } catch {
+        addToast('Error cargando datos', 'error')
+      } finally {
+        setLoadingReports(false)
+      }
+    }
+    void load()
+    void loadCitas()
+  }, [addToast, loadCitas])
+
+  // Date range for calendar
+  const dateRange = useMemo(() => {
+    if (calView === 'day') return [new Date(currentDate)]
+    const mon = getMonday(currentDate)
+    return Array.from({ length: 6 }, (_, i) => addDays(mon, i)) // Mon-Sat
+  }, [calView, currentDate])
+
+  const dateStrings = useMemo(() => dateRange.map(formatDate), [dateRange])
+
+  // Citas in current range, grouped by team+date
+  const citasByTeamDate = useMemo(() => {
+    const map: Record<string, Cita[]> = {}
+    allCitas
+      .filter((c) => dateStrings.includes(c.fecha))
+      .forEach((c) => {
+        const team = c.equipo || '_unassigned'
+        const key = `${team}|${c.fecha}`
+        if (!map[key]) map[key] = []
+        map[key].push(c)
+      })
+    return map
+  }, [allCitas, dateStrings])
+
+  // Unassigned citas
+  const unassigned = useMemo(
+    () => allCitas.filter((c) => !c.equipo && dateStrings.includes(c.fecha)),
+    [allCitas, dateStrings]
+  )
+
+  // Navigation
+  const navigateDate = (dir: number) => {
+    const days = calView === 'day' ? 1 : 7
+    setCurrentDate((d) => addDays(d, dir * days))
+  }
+
+  const goToday = () => setCurrentDate(new Date())
+
+  // Assign via drag
+  const handleAssignDrop = async (cita: Cita, team: string, date: string) => {
+    try {
+      const result = await assignCita({
+        citaId: cita.id,
+        equipo: team,
+        linkDocs: cita.linkDocs || '',
+        ha: cita.ha || '',
+        direccion: cita.calle || '',
+        cp: cita.cp || '',
+        ciudad: cita.ciudad || '',
+        inicio: cita.inicio || '',
+        fin: cita.fin || '',
+        tecnicos: String(cita.tecnicos || ''),
+        fecha: date,
+      })
+      if (result.success) {
+        addToast(`${cita.ha} asignada a ${team}`, 'success')
+        void loadCitas()
+      } else {
+        addToast(result.error || 'Error', 'error')
+      }
+    } catch {
+      addToast('Error asignando cita', 'error')
+    }
+  }
+
+  // Assign from detail panel
+  const handleAssignFromPanel = async (cita: Cita, equipo: string, linkDocs: string) => {
     try {
       const result = await assignCita({
         citaId: cita.id,
@@ -185,238 +175,277 @@ export function AdminView() {
       })
       if (result.success) {
         addToast('Cita asignada', 'success')
-        void loadCitas(citasDate)
+        setSelectedCita(null)
+        void loadCitas()
       } else {
         addToast(result.error || 'Error', 'error')
       }
-    } catch (e) {
+    } catch {
       addToast('Error asignando cita', 'error')
     }
   }
 
+  // Reports filtering
+  const [filterTeam, setFilterTeam] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+
+  const filteredReports = useMemo(() => {
+    return allReports
+      .filter((r) => {
+        if (filterTeam && r.team !== filterTeam) return false
+        if (filterStatus && r.workStatus !== filterStatus) return false
+        return true
+      })
+      .sort((a, b) => (b.timestamp || b.date).localeCompare(a.timestamp || a.date))
+      .slice(0, 100)
+  }, [allReports, filterTeam, filterStatus])
+
+  // Team stats
+  const teamData = useMemo(() => {
+    const byteam: Record<string, { total: number; ok: number; notOk: number; totalTime: number; techs: Set<string> }> = {}
+    allReports.forEach((r) => {
+      const t = r.team || 'Sin equipo'
+      if (!byteam[t]) byteam[t] = { total: 0, ok: 0, notOk: 0, totalTime: 0, techs: new Set() }
+      byteam[t].total++
+      if (r.workStatus === 'completed-ok' || r.workStatus === 'preinstalled') byteam[t].ok++
+      if (r.workStatus === 'completed-not-ok') byteam[t].notOk++
+      byteam[t].totalTime += r.duration || 0
+      if (r.technician) byteam[t].techs.add(r.technician)
+    })
+    return byteam
+  }, [allReports])
+
+  // CSV export
   const exportCSV = () => {
-    const headers = [
-      'Fecha',
-      'Equipo',
-      'Técnico',
-      'Cliente',
-      'Estado',
-      'Orden/HA',
-      'Inicio',
-      'Fin',
-      'Duración (min)',
-      'Comentarios',
-    ]
-    const rows = filtered.map((r) => [
-      r.date,
-      r.team,
-      r.technician,
-      r.client,
+    const headers = ['Fecha', 'Equipo', 'Tecnico', 'Estado', 'HA', 'Inicio', 'Fin', 'Duracion (min)', 'Comentarios']
+    const rows = filteredReports.map((r) => [
+      r.date, r.team, r.technician,
       STATUS_MAP[r.workStatus]?.label || r.workStatus,
-      r.orderNumber || r.ha || '',
-      r.startTime,
-      r.endTime,
-      r.duration,
+      r.ha || '', r.startTime, r.endTime, r.duration,
       `"${(r.comments || '').replace(/"/g, '""')}"`,
     ])
     const csv = [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\n')
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `field-report-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `field-report-${formatDate(new Date())}.csv`
     a.click()
   }
 
-  const wcTeams = teamConfigs.filter((t) => t.client === 'westconnect').map((t) => t.name)
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20 text-gray-400">Cargando datos...</div>
-    )
-  }
+  const headerLabel = useMemo(() => {
+    if (calView === 'day') {
+      return currentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    }
+    const start = dateRange[0]
+    const end = dateRange[dateRange.length - 1]
+    return `${start.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} — ${end.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`
+  }, [calView, currentDate, dateRange])
 
   return (
     <div className="min-h-screen bg-admin-bg text-white">
-      <div className="mx-auto max-w-4xl p-4">
+      <div className="mx-auto max-w-6xl p-3 sm:p-4">
         {/* Tabs */}
         <div className="mb-4 flex gap-1 rounded-lg bg-admin-card p-1">
-          {(['overview', 'citas', 'reports', 'teams'] as Tab[]).map((t) => (
+          {(['calendar', 'reports', 'teams'] as Tab[]).map((t) => (
             <button
               key={t}
-              onClick={() => {
-                setTab(t)
-                if (t === 'citas') void loadCitas(citasDate)
-              }}
+              onClick={() => setTab(t)}
               className={`flex-1 rounded-md py-2 text-[13px] font-semibold ${
                 tab === t ? 'bg-brand-500 text-white' : 'text-gray-400'
               }`}
             >
-              {t === 'overview' ? 'General' : t === 'citas' ? 'Citas' : t === 'reports' ? 'Reportes' : 'Equipos'}
+              {t === 'calendar' ? 'Calendario' : t === 'reports' ? 'Reportes' : 'Equipos'}
             </button>
           ))}
         </div>
 
-        {/* Filters */}
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as Period)}
-            className="rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-sm text-white"
-          >
-            <option value="today">Hoy</option>
-            <option value="week">Esta semana</option>
-            <option value="month">Este mes</option>
-            <option value="all">Todo</option>
-            <option value="custom">Personalizado</option>
-          </select>
-          <select
-            value={filterClient}
-            onChange={(e) => setFilterClient(e.target.value)}
-            className="rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-sm text-white"
-          >
-            <option value="">Todos clientes</option>
-            <option value="glasfaser-plus">GFP</option>
-            <option value="westconnect">WC</option>
-          </select>
-          <select
-            value={filterTeam}
-            onChange={(e) => setFilterTeam(e.target.value)}
-            className="rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-sm text-white"
-          >
-            <option value="">Todos equipos</option>
-            {teams.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-sm text-white"
-          >
-            <option value="">Todos estados</option>
-            {Object.entries(STATUS_MAP).map(([k, v]) => (
-              <option key={k} value={k}>{v.label}</option>
-            ))}
-          </select>
-        </div>
-        {period === 'custom' && (
-          <div className="mb-4 flex gap-2">
-            <input
-              type="date"
-              value={customFrom}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              className="flex-1 rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-sm text-white"
-            />
-            <input
-              type="date"
-              value={customTo}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="flex-1 rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-sm text-white"
-            />
-          </div>
-        )}
-
-        {/* Overview tab */}
-        {tab === 'overview' && (
-          <>
-            {/* KPIs */}
-            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <KpiCard value={kpis.total} label="Total Reportes" sub={`${kpis.avgPerDay}/día`} color="text-brand-500" />
-              <KpiCard value={kpis.ok} label="Finalizadas OK" sub={`${kpis.preinstalled} preinstaladas`} color="text-brand-500" />
-              <KpiCard value={kpis.absent} label="Ausentes" sub={`${kpis.notOk} No OK`} color="text-warning" />
-              <KpiCard value={`${kpis.successRate}%`} label="Tasa de Éxito" sub="OK + Preinstaladas" color="text-blue-400" />
-              <KpiCard value={formatDuration(kpis.avgDuration)} label="Duración Prom." sub={`${kpis.uniqueDays} días`} color="text-purple-400" />
-            </div>
-
-            {/* Daily chart */}
-            <div className="mb-4 rounded-lg bg-admin-card p-4">
-              <h3 className="mb-3 text-sm font-bold text-gray-300">Reportes por día</h3>
-              {dailyData.length === 0 ? (
-                <p className="text-center text-sm text-gray-500">Sin datos</p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {dailyData.map((d) => (
-                    <div key={d.date} className="flex items-center gap-3">
-                      <span className="w-16 text-right text-[12px] text-gray-400">{d.label}</span>
-                      <div className="flex-1 rounded-full bg-admin-bg">
-                        <div
-                          className="rounded-full bg-brand-500 py-1 text-center text-[11px] font-bold text-white"
-                          style={{ width: `${Math.max(d.pct, 10)}%` }}
-                        >
-                          {d.count}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Status distribution */}
-            <div className="mb-4 rounded-lg bg-admin-card p-4">
-              <h3 className="mb-3 text-sm font-bold text-gray-300">Distribución por estado</h3>
-              <div className="flex flex-col gap-2">
-                {statusData.map((s) => (
-                  <div key={s.status} className="flex items-center gap-3">
-                    <span className="w-28 text-right text-[12px] text-gray-400">{s.label}</span>
-                    <div className="flex-1 rounded-full bg-admin-bg">
-                      <div
-                        className="rounded-full py-1 text-center text-[11px] font-bold text-white"
-                        style={{
-                          width: `${Math.max(s.pct, 8)}%`,
-                          backgroundColor: s.color,
-                        }}
-                      >
-                        {s.count}
-                      </div>
-                    </div>
-                    <span className="w-10 text-right text-[11px] text-gray-500">{s.pct}%</span>
-                  </div>
-                ))}
+        {/* Calendar tab */}
+        {tab === 'calendar' && (
+          <div className="flex flex-col gap-3">
+            {/* Calendar header */}
+            <div className="flex items-center justify-between rounded-lg bg-admin-card p-3">
+              <div className="flex items-center gap-2">
+                <button onClick={() => navigateDate(-1)} className="rounded-lg bg-admin-bg px-3 py-1.5 text-sm font-bold text-gray-300 hover:text-white">&lt;</button>
+                <button onClick={goToday} className="rounded-lg bg-brand-500/20 px-3 py-1.5 text-[12px] font-bold text-brand-400">Hoy</button>
+                <button onClick={() => navigateDate(1)} className="rounded-lg bg-admin-bg px-3 py-1.5 text-sm font-bold text-gray-300 hover:text-white">&gt;</button>
+              </div>
+              <span className="text-[13px] font-bold text-gray-300">{headerLabel}</span>
+              <div className="flex rounded-lg bg-admin-bg p-0.5">
+                <button
+                  onClick={() => setCalView('day')}
+                  className={`rounded-md px-3 py-1 text-[11px] font-bold ${calView === 'day' ? 'bg-brand-500 text-white' : 'text-gray-400'}`}
+                >Dia</button>
+                <button
+                  onClick={() => setCalView('week')}
+                  className={`rounded-md px-3 py-1 text-[11px] font-bold ${calView === 'week' ? 'bg-brand-500 text-white' : 'text-gray-400'}`}
+                >Semana</button>
               </div>
             </div>
-          </>
-        )}
 
-        {/* Citas tab */}
-        {tab === 'citas' && (
-          <div>
-            <div className="mb-3 flex gap-2">
-              <input
-                type="date"
-                value={citasDate}
-                onChange={(e) => {
-                  setCitasDate(e.target.value)
-                  void loadCitas(e.target.value)
-                }}
-                className="flex-1 rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-sm text-white"
-              />
-              <button
-                onClick={() => void loadCitas(citasDate)}
-                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white"
-              >
-                Recargar
-              </button>
-            </div>
             {citasLoading ? (
-              <p className="py-12 text-center text-sm text-gray-400">Cargando citas...</p>
-            ) : citas.length === 0 ? (
-              <p className="py-12 text-center text-sm text-gray-500">Sin citas</p>
+              <div className="py-20 text-center text-gray-500">Cargando citas...</div>
             ) : (
-              <CitasAdminList
-                citas={citas}
-                wcTeams={wcTeams}
-                onAssign={handleAssign}
-              />
+              <div className="flex gap-3">
+                {/* Main calendar grid */}
+                <div className="flex-1 overflow-x-auto">
+                  <div
+                    className="grid min-w-[600px] gap-px rounded-lg bg-admin-border"
+                    style={{
+                      gridTemplateColumns: `100px repeat(${dateRange.length}, 1fr)`,
+                      gridTemplateRows: `auto repeat(${displayTeams.length}, 1fr)`,
+                    }}
+                  >
+                    {/* Header: empty corner + date columns */}
+                    <div className="bg-admin-card p-2 text-[11px] font-bold text-gray-500 uppercase">Equipo</div>
+                    {dateRange.map((d) => {
+                      const isToday = formatDate(d) === formatDate(new Date())
+                      return (
+                        <div
+                          key={formatDate(d)}
+                          className={`bg-admin-card p-2 text-center ${isToday ? 'bg-brand-500/10' : ''}`}
+                        >
+                          <div className="text-[10px] font-bold uppercase text-gray-500">
+                            {d.toLocaleDateString('es-ES', { weekday: 'short' })}
+                          </div>
+                          <div className={`text-[14px] font-bold ${isToday ? 'text-brand-400' : 'text-gray-300'}`}>
+                            {d.getDate()}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {/* Team rows */}
+                    {displayTeams.map((team) => (
+                      <>
+                        {/* Team label */}
+                        <div key={`label-${team}`} className="flex items-center bg-admin-card px-2 py-3">
+                          <span className="text-[12px] font-bold text-gray-300">{team}</span>
+                        </div>
+                        {/* Date cells */}
+                        {dateRange.map((d) => {
+                          const dateStr = formatDate(d)
+                          const key = `${team}|${dateStr}`
+                          const citas = citasByTeamDate[key] || []
+                          const isToday = dateStr === formatDate(new Date())
+                          return (
+                            <div
+                              key={`${team}-${dateStr}`}
+                              className={`min-h-[80px] bg-admin-card p-1 ${isToday ? 'bg-brand-500/5' : ''}`}
+                              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                              onDrop={(e) => {
+                                e.preventDefault()
+                                if (dragCita) {
+                                  void handleAssignDrop(dragCita, team, dateStr)
+                                  setDragCita(null)
+                                }
+                              }}
+                            >
+                              {citas.map((c) => {
+                                const colors = CITA_COLORS[c.status] || CITA_COLORS.libre
+                                return (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    draggable
+                                    onDragStart={() => setDragCita(c)}
+                                    onClick={() => setSelectedCita(c)}
+                                    className="mb-1 w-full cursor-pointer rounded-md px-1.5 py-1 text-left transition-all hover:scale-[1.02] hover:shadow-md"
+                                    style={{
+                                      backgroundColor: colors.bg,
+                                      color: colors.text,
+                                      borderLeft: `3px solid ${colors.border}`,
+                                    }}
+                                  >
+                                    <div className="truncate text-[11px] font-bold">{c.ha || '—'}</div>
+                                    <div className="truncate text-[9px] opacity-75">
+                                      {c.inicio}–{c.fin} · {c.tecnicos}TK
+                                    </div>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )
+                        })}
+                      </>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sidebar: unassigned or detail panel */}
+                <div className="hidden w-72 shrink-0 flex-col gap-3 lg:flex">
+                  {selectedCita ? (
+                    <DetailPanel
+                      cita={selectedCita}
+                      teams={displayTeams}
+                      onClose={() => setSelectedCita(null)}
+                      onAssign={handleAssignFromPanel}
+                    />
+                  ) : (
+                    <UnassignedSidebar
+                      citas={unassigned}
+                      onDragStart={setDragCita}
+                      onSelect={setSelectedCita}
+                    />
+                  )}
+                </div>
+              </div>
             )}
+
+            {/* Mobile detail panel */}
+            {selectedCita && (
+              <div className="lg:hidden">
+                <DetailPanel
+                  cita={selectedCita}
+                  teams={displayTeams}
+                  onClose={() => setSelectedCita(null)}
+                  onAssign={handleAssignFromPanel}
+                />
+              </div>
+            )}
+
+            {/* Mobile unassigned list */}
+            {!selectedCita && unassigned.length > 0 && (
+              <div className="lg:hidden">
+                <UnassignedSidebar
+                  citas={unassigned}
+                  onDragStart={setDragCita}
+                  onSelect={setSelectedCita}
+                />
+              </div>
+            )}
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-2 rounded-lg bg-admin-card p-3">
+              {Object.entries(CITA_COLORS).map(([status, colors]) => (
+                <div key={status} className="flex items-center gap-1.5">
+                  <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}` }} />
+                  <span className="text-[10px] text-gray-400">{CITA_STATUS_LABELS[status] || status}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {/* Reports tab */}
         {tab === 'reports' && (
           <div>
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm text-gray-400">{filtered.length} reportes</span>
+            <div className="mb-3 flex items-center gap-2">
+              <select
+                value={filterTeam}
+                onChange={(e) => setFilterTeam(e.target.value)}
+                className="flex-1 rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-sm text-white"
+              >
+                <option value="">Todos equipos</option>
+                {displayTeams.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="flex-1 rounded-lg border border-admin-border bg-admin-card px-3 py-2 text-sm text-white"
+              >
+                <option value="">Todos estados</option>
+                {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
               <button
                 onClick={exportCSV}
                 className="rounded-lg bg-admin-card px-3 py-2 text-[13px] font-semibold text-brand-500"
@@ -424,134 +453,78 @@ export function AdminView() {
                 CSV
               </button>
             </div>
-            <div className="overflow-x-auto rounded-lg bg-admin-card">
-              <table className="w-full text-left text-[12px]">
-                <thead>
-                  <tr className="border-b border-admin-border text-[11px] uppercase text-gray-500">
-                    <th className="px-3 py-2">Fecha</th>
-                    <th className="px-3 py-2">Equipo</th>
-                    <th className="px-3 py-2">Técnico</th>
-                    <th className="px-3 py-2">Estado</th>
-                    <th className="px-3 py-2">Orden/HA</th>
-                    <th className="px-3 py-2">Duración</th>
-                    <th className="px-3 py-2">Fotos</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.slice(0, 100).map((r, i) => {
-                    const info = STATUS_MAP[r.workStatus] || { label: r.workStatus, color: '#999' }
-                    return (
-                      <tr key={i} className="border-b border-admin-border">
-                        <td className="px-3 py-2 text-gray-300">{r.date}</td>
-                        <td className="px-3 py-2 text-gray-300">{r.team || '—'}</td>
-                        <td className="px-3 py-2 text-gray-300">{r.technician || '—'}</td>
-                        <td className="px-3 py-2">
-                          <span
-                            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                            style={{ backgroundColor: info.color + '30', color: info.color }}
-                          >
-                            {info.label}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 font-mono text-gray-300">
-                          {r.orderNumber || r.ha || '—'}
-                        </td>
-                        <td className="px-3 py-2 text-gray-400">{formatDuration(r.duration)}</td>
-                        <td className="px-3 py-2 text-gray-400">{r.photoCount || 0}</td>
-                      </tr>
-                    )
-                  })}
-                  {filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
-                        Sin reportes
-                      </td>
+            {loadingReports ? (
+              <div className="py-20 text-center text-gray-500">Cargando...</div>
+            ) : (
+              <div className="overflow-x-auto rounded-lg bg-admin-card">
+                <table className="w-full text-left text-[12px]">
+                  <thead>
+                    <tr className="border-b border-admin-border text-[11px] uppercase text-gray-500">
+                      <th className="px-3 py-2">Fecha</th>
+                      <th className="px-3 py-2">Equipo</th>
+                      <th className="px-3 py-2">Tecnico</th>
+                      <th className="px-3 py-2">Estado</th>
+                      <th className="px-3 py-2">HA</th>
+                      <th className="px-3 py-2">Duracion</th>
+                      <th className="px-3 py-2">Fotos</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredReports.map((r, i) => {
+                      const info = STATUS_MAP[r.workStatus] || { label: r.workStatus, color: '#999' }
+                      return (
+                        <tr key={i} className="border-b border-admin-border">
+                          <td className="px-3 py-2 text-gray-300">{r.date}</td>
+                          <td className="px-3 py-2 text-gray-300">{r.team || '—'}</td>
+                          <td className="px-3 py-2 text-gray-300">{r.technician || '—'}</td>
+                          <td className="px-3 py-2">
+                            <span
+                              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                              style={{ backgroundColor: info.color + '30', color: info.color }}
+                            >
+                              {info.label}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 font-mono text-gray-300">{r.ha || '—'}</td>
+                          <td className="px-3 py-2 text-gray-400">{formatDuration(r.duration)}</td>
+                          <td className="px-3 py-2 text-gray-400">{r.photoCount || 0}</td>
+                        </tr>
+                      )
+                    })}
+                    {filteredReports.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-3 py-8 text-center text-gray-500">Sin reportes</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
         {/* Teams tab */}
         {tab === 'teams' && (
-          <div>
-            {/* Team cards */}
-            <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {Object.entries(teamData)
-                .sort(([, a], [, b]) => b.total - a.total)
-                .map(([name, d]) => {
-                  const rate = d.total > 0 ? Math.round((d.ok / d.total) * 100) : 0
-                  return (
-                    <div key={name} className="rounded-lg bg-admin-card p-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="font-bold text-white">{name}</span>
-                        <span className="text-2xl font-extrabold text-brand-500">{d.total}</span>
-                      </div>
-                      <p className="text-[12px] text-gray-400">
-                        {d.ok} OK &middot; {d.notOk} No OK &middot; {rate}% éxito
-                      </p>
-                      <p className="text-[11px] text-gray-500">
-                        {formatDuration(d.total > 0 ? Math.round(d.totalTime / d.total) : 0)} prom &middot; {Object.keys(d.techs).length} técnicos
-                      </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {Object.entries(teamData)
+              .sort(([, a], [, b]) => b.total - a.total)
+              .map(([name, d]) => {
+                const rate = d.total > 0 ? Math.round((d.ok / d.total) * 100) : 0
+                return (
+                  <div key={name} className="rounded-lg bg-admin-card p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="font-bold text-white">{name}</span>
+                      <span className="text-2xl font-extrabold text-brand-500">{d.total}</span>
                     </div>
-                  )
-                })}
-            </div>
-
-            {/* Tech detail table */}
-            <div className="overflow-x-auto rounded-lg bg-admin-card">
-              <table className="w-full text-left text-[12px]">
-                <thead>
-                  <tr className="border-b border-admin-border text-[11px] uppercase text-gray-500">
-                    <th className="px-3 py-2">Técnico</th>
-                    <th className="px-3 py-2">Equipo</th>
-                    <th className="px-3 py-2">Total</th>
-                    <th className="px-3 py-2">OK</th>
-                    <th className="px-3 py-2">No OK</th>
-                    <th className="px-3 py-2">Éxito</th>
-                    <th className="px-3 py-2">Duración</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(teamData)
-                    .flatMap(([team, d]) =>
-                      Object.entries(d.techs).map(([tech, td]) => ({
-                        tech,
-                        team,
-                        ...td,
-                        avg: td.total > 0 ? Math.round(td.totalTime / td.total) : 0,
-                        rate: td.total > 0 ? Math.round((td.ok / td.total) * 100) : 0,
-                      }))
-                    )
-                    .sort((a, b) => b.total - a.total)
-                    .map((t, i) => (
-                      <tr key={i} className="border-b border-admin-border">
-                        <td className="px-3 py-2 text-gray-300">{t.tech}</td>
-                        <td className="px-3 py-2 text-gray-400">{t.team}</td>
-                        <td className="px-3 py-2 font-bold text-white">{t.total}</td>
-                        <td className="px-3 py-2 text-brand-500">{t.ok}</td>
-                        <td className="px-3 py-2 text-red-400">{t.notOk}</td>
-                        <td className="px-3 py-2">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              t.rate >= 80
-                                ? 'bg-green-900/50 text-brand-500'
-                                : t.rate >= 50
-                                  ? 'bg-yellow-900/50 text-warning'
-                                  : 'bg-red-900/50 text-red-400'
-                            }`}
-                          >
-                            {t.rate}%
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-gray-400">{formatDuration(t.avg)}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
+                    <p className="text-[12px] text-gray-400">
+                      {d.ok} OK &middot; {d.notOk} No OK &middot; {rate}% exito
+                    </p>
+                    <p className="text-[11px] text-gray-500">
+                      {formatDuration(d.total > 0 ? Math.round(d.totalTime / d.total) : 0)} prom &middot; {d.techs.size} tecnicos
+                    </p>
+                  </div>
+                )
+              })}
           </div>
         )}
       </div>
@@ -561,149 +534,137 @@ export function AdminView() {
 
 // --- Sub-components ---
 
-function KpiCard({
-  value,
-  label,
-  sub,
-  color,
+function UnassignedSidebar({
+  citas,
+  onDragStart,
+  onSelect,
 }: {
-  value: string | number
-  label: string
-  sub: string
-  color: string
+  citas: Cita[]
+  onDragStart: (c: Cita) => void
+  onSelect: (c: Cita) => void
 }) {
   return (
     <div className="rounded-lg bg-admin-card p-3">
-      <div className={`text-2xl font-extrabold ${color}`}>{value}</div>
-      <div className="text-[12px] font-semibold text-gray-300">{label}</div>
-      <div className="text-[11px] text-gray-500">{sub}</div>
-    </div>
-  )
-}
-
-function CitasAdminList({
-  citas,
-  wcTeams,
-  onAssign,
-}: {
-  citas: Cita[]
-  wcTeams: string[]
-  onAssign: (cita: Cita, equipo: string, linkDocs: string) => void
-}) {
-  // Group by date
-  const byDate: Record<string, Cita[]> = {}
-  citas.forEach((c) => {
-    if (!byDate[c.fecha]) byDate[c.fecha] = []
-    byDate[c.fecha].push(c)
-  })
-
-  return (
-    <div className="flex flex-col gap-6">
-      {Object.keys(byDate)
-        .sort()
-        .map((fecha) => (
-          <div key={fecha}>
-            <h4 className="mb-2 border-b border-admin-border pb-1 text-[13px] font-bold uppercase tracking-wider text-blue-400">
-              {new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', {
-                weekday: 'short',
-                day: 'numeric',
-                month: 'short',
-              })}{' '}
-              ({byDate[fecha].length})
-            </h4>
-            <div className="flex flex-col gap-2">
-              {byDate[fecha].map((c) => (
-                <AdminCitaCard key={c.id} cita={c} wcTeams={wcTeams} onAssign={onAssign} />
-              ))}
+      <h4 className="mb-3 text-[12px] font-bold uppercase tracking-wider text-gray-500">
+        Sin asignar ({citas.length})
+      </h4>
+      {citas.length === 0 ? (
+        <p className="text-[12px] text-gray-600">Todas las citas estan asignadas</p>
+      ) : (
+        <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
+          {citas.map((c) => (
+            <div
+              key={c.id}
+              draggable
+              onDragStart={() => onDragStart(c)}
+              onClick={() => onSelect(c)}
+              className="cursor-grab rounded-lg border border-admin-border bg-admin-bg p-2 transition-all hover:border-brand-500/50 active:cursor-grabbing"
+            >
+              <div className="text-[12px] font-bold text-white">{c.ha || '—'}</div>
+              <div className="truncate text-[10px] text-gray-400">
+                {c.calle ? `${c.calle}, ${c.ciudad}` : c.ciudad || '—'}
+              </div>
+              <div className="text-[10px] text-blue-400">
+                {c.inicio}–{c.fin} · {c.tecnicos} TK
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-function AdminCitaCard({
+function DetailPanel({
   cita,
-  wcTeams,
+  teams,
+  onClose,
   onAssign,
 }: {
   cita: Cita
-  wcTeams: string[]
+  teams: string[]
+  onClose: () => void
   onAssign: (cita: Cita, equipo: string, linkDocs: string) => void
 }) {
-  const isDone = CITA_STATUS_DONE.includes(cita.status)
-  const statusLabel = CITA_STATUS_LABELS[cita.status] || cita.status
   const [equipo, setEquipo] = useState(cita.equipo || '')
   const [linkDocs, setLinkDocs] = useState(cita.linkDocs || '')
   const [assigning, setAssigning] = useState(false)
 
-  const addr = cita.calle
-    ? `${cita.calle}, ${cita.cp} ${cita.ciudad}`.trim()
-    : cita.ciudad || '—'
+  const statusLabel = CITA_STATUS_LABELS[cita.status] || cita.status
+  const colors = CITA_COLORS[cita.status] || CITA_COLORS.libre
+  const address = cita.calle ? `${cita.calle}, ${cita.cp} ${cita.ciudad}` : cita.ciudad || '—'
 
   const handleAssign = async () => {
     if (!equipo) return
     setAssigning(true)
-    await onAssign(cita, equipo, linkDocs)
+    onAssign(cita, equipo, linkDocs)
     setAssigning(false)
   }
 
   return (
-    <div className="rounded-lg bg-admin-card p-3">
-      <div className="mb-1 flex items-start justify-between">
-        <span className="text-[16px] font-bold text-white">{cita.ha || '—'}</span>
-        <span className="rounded-full bg-blue-900/50 px-2 py-0.5 text-[11px] font-semibold text-blue-300">
-          {statusLabel}
-        </span>
+    <div className="rounded-lg bg-admin-card p-4">
+      <div className="mb-3 flex items-start justify-between">
+        <div>
+          <h4 className="text-[16px] font-bold text-white">{cita.ha || '—'}</h4>
+          <span
+            className="inline-block mt-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
+            style={{ backgroundColor: colors.bg, color: colors.text }}
+          >
+            {statusLabel}
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          className="flex h-7 w-7 items-center justify-center rounded-full bg-admin-bg text-gray-400 hover:text-white"
+        >
+          x
+        </button>
       </div>
-      <p className="text-[13px] text-gray-400">{addr}</p>
-      <p className="mb-2 text-[12px] text-blue-400">
-        {cita.inicio} – {cita.fin} &middot; {cita.tecnicos} TK
-      </p>
-      {!isDone ? (
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <select
-              value={equipo}
-              onChange={(e) => setEquipo(e.target.value)}
-              className="flex-1 rounded-lg border border-admin-border bg-admin-bg px-2 py-1.5 text-sm text-white"
-            >
-              <option value="">— Equipo —</option>
-              {wcTeams.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => void handleAssign()}
-              disabled={!equipo || assigning}
-              className="rounded-lg bg-brand-500 px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-50"
-            >
-              {assigning ? '...' : cita.equipo ? 'Actualizar' : 'Asignar'}
-            </button>
-          </div>
-          <input
-            type="url"
-            value={linkDocs}
-            onChange={(e) => setLinkDocs(e.target.value)}
-            placeholder="Link Aushändigung (Drive)"
-            className="rounded-lg border border-admin-border bg-admin-bg px-2 py-1.5 text-sm text-white placeholder:text-gray-600"
-          />
-        </div>
-      ) : (
-        <div className="text-[12px] text-gray-500">
-          {cita.equipo && <span>{cita.equipo}</span>}
-          {cita.linkDocs && (
-            <a
-              href={cita.linkDocs}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-2 text-blue-400"
-            >
-              Docs
-            </a>
-          )}
-        </div>
+
+      <div className="mb-3 flex flex-col gap-1 text-[12px]">
+        <p className="text-gray-400">{address}</p>
+        <p className="text-blue-400">
+          {cita.fecha} · {cita.inicio}–{cita.fin} · {cita.tecnicos} TK
+        </p>
+        {cita.equipo && <p className="text-gray-300">Equipo: {cita.equipo}</p>}
+      </div>
+
+      {cita.linkDocs && (
+        <a
+          href={cita.linkDocs}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-3 inline-block text-[12px] text-blue-400 underline"
+        >
+          Ver documentos
+        </a>
       )}
+
+      <div className="border-t border-admin-border pt-3">
+        <label className="mb-1 block text-[11px] font-bold uppercase text-gray-500">Asignar equipo</label>
+        <select
+          value={equipo}
+          onChange={(e) => setEquipo(e.target.value)}
+          className="mb-2 w-full rounded-lg border border-admin-border bg-admin-bg px-2 py-1.5 text-sm text-white"
+        >
+          <option value="">— Equipo —</option>
+          {teams.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <input
+          type="url"
+          value={linkDocs}
+          onChange={(e) => setLinkDocs(e.target.value)}
+          placeholder="Link documentos (Drive)"
+          className="mb-2 w-full rounded-lg border border-admin-border bg-admin-bg px-2 py-1.5 text-sm text-white placeholder:text-gray-600"
+        />
+        <button
+          onClick={() => void handleAssign()}
+          disabled={!equipo || assigning}
+          className="w-full rounded-lg bg-brand-500 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+        >
+          {assigning ? '...' : cita.equipo ? 'Actualizar' : 'Asignar'}
+        </button>
+      </div>
     </div>
   )
 }

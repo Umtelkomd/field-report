@@ -22,9 +22,7 @@ const es = {
   needEvidence: 'Se requiere al menos 1 foto de evidencia',
   needPhotos: 'Faltan fotos obligatorias',
   needProtocols: 'Deben completarse los 4 protocolos',
-  needOrder: 'Ingrese el Nº de Orden',
   needHA: 'Ingrese todos los datos HA requeridos',
-  needBuilding: 'Seleccione el tipo de edificio',
   needChecklist: 'Complete todos los items del checklist NE4',
   // Form labels
   sectionBasic: 'Información Básica',
@@ -51,15 +49,6 @@ const es = {
   lblComments: 'Observaciones',
   phComments: 'Agregue observaciones...',
   selectOpt: 'Seleccionar...',
-  // GFP
-  lblOrder: 'Nº Orden',
-  lblBuildType: 'Tipo de Edificio',
-  sdu1simple: 'SDU(1): AP/TA - 1 vivienda simple',
-  sdu1apTa: 'SDU(1): AP + TA - 1 vivienda con AP separado',
-  sdu2: 'SDU(2): 2 viviendas',
-  mdu3: 'MDU(3+): 3 o más viviendas',
-  gfpData: 'Datos de Orden - Glasfaser Plus',
-  gfpPhotos: 'Fotos Glasfaser Plus',
   // WC
   wcData: 'Datos HA - Westconnect',
   lblHA: 'Nº HA',
@@ -201,8 +190,10 @@ const es = {
   helpWE: 'Por cada vivienda: fotografía el GF-TA con pegatinas, el patch cable conectado al ONT, el ONT funcionando con LEDs visibles, el número de serie del ONT y la medición de fibra.',
   helpRoute: 'Documenta el recorrido del cable desde el sótano hasta las viviendas siguiendo el tipo de instalación seleccionado.',
   helpExterior: 'Fotografía el canal/trunking en pasillo, escalera o exterior. Si hay sello cortafuegos, también fotografíalo.',
-  // PDF
+  // PDF / Protocol
   pdfUpload: 'Subir PDF',
+  protocolTitle: 'Protocolo de Instalacion',
+  protocolHint: 'Sube fotos o PDFs de los protocolos firmados',
 } as const
 
 const de: Record<keyof typeof es, string> = {
@@ -224,9 +215,7 @@ const de: Record<keyof typeof es, string> = {
   needEvidence: 'Mindestens 1 Beweisfoto erforderlich',
   needPhotos: 'Pflichtfotos fehlen',
   needProtocols: 'Alle 4 Protokolle müssen ausgefüllt sein',
-  needOrder: 'Auftragsnummer eingeben',
   needHA: 'Alle HA-Daten eingeben',
-  needBuilding: 'Gebäudetyp auswählen',
   needChecklist: 'Bitte alle NE4-Checklisten-Punkte ausfüllen',
   sectionBasic: 'Grundinformationen',
   lblClient: 'Kunde/Betreiber',
@@ -252,14 +241,6 @@ const de: Record<keyof typeof es, string> = {
   lblComments: 'Anmerkungen',
   phComments: 'Wichtige Anmerkungen...',
   selectOpt: 'Auswählen...',
-  lblOrder: 'Auftragsnr.',
-  lblBuildType: 'Gebäudetyp',
-  sdu1simple: 'SDU(1): AP/TA - 1 Wohnung einfach',
-  sdu1apTa: 'SDU(1): AP + TA - 1 Wohnung mit separatem AP',
-  sdu2: 'SDU(2): 2 Wohnungen',
-  mdu3: 'MDU(3+): 3 oder mehr Wohnungen',
-  gfpData: 'Auftragsdaten - Glasfaser Plus',
-  gfpPhotos: 'Fotos Glasfaser Plus',
   wcData: 'HA-Daten - Westconnect',
   lblHA: 'HA-Nr.',
   lblUnits: 'Wohneinheiten (WE)',
@@ -393,8 +374,10 @@ const de: Record<keyof typeof es, string> = {
   helpWE: 'Pro Wohnung: GF-TA mit Aufklebern, Patchkabel zum ONT, ONT mit sichtbaren LEDs, ONT-Seriennummer und Fasermessung fotografieren.',
   helpRoute: 'Den Kabelverlauf vom Keller zu den Wohnungen gemäß der gewählten Installationsart dokumentieren.',
   helpExterior: 'Kanal/Trunking in Flur, Treppe oder Außenbereich fotografieren. Falls Brandschott vorhanden, ebenfalls fotografieren.',
-  // PDF
+  // PDF / Protocol
   pdfUpload: 'PDF hochladen',
+  protocolTitle: 'Installationsprotokoll',
+  protocolHint: 'Fotos oder PDFs der unterschriebenen Protokolle hochladen',
 }
 
 export type TranslationKey = keyof typeof es

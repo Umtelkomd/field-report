@@ -9,14 +9,13 @@ export function StatusBar() {
   const setLang = useAppStore((s) => s.setLang)
   const view = useAppStore((s) => s.view)
   const setView = useAppStore((s) => s.setView)
-  const clientType = useAppStore((s) => s.clientType)
 
   const showBack = view !== 'pin' && view !== 'member'
 
   const goBack = () => {
     if (view === 'admin') setView('pin')
     else if (view === 'history') setView('form')
-    else if (view === 'form') setView(clientType === 'westconnect' ? 'citas' : 'member')
+    else if (view === 'form') setView('citas')
     else if (view === 'citas') setView('member')
     else setView('pin')
   }

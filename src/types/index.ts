@@ -1,5 +1,4 @@
 export type ViewName = 'pin' | 'member' | 'citas' | 'form' | 'history' | 'admin'
-export type ClientType = 'glasfaser-plus' | 'westconnect'
 export type Lang = 'es' | 'de'
 
 export type WorkStatus =
@@ -14,7 +13,6 @@ export type WorkStatus =
 export interface TeamConfig {
   pin: string
   name: string
-  client: ClientType
   members: string[]
 }
 
@@ -44,7 +42,6 @@ export interface Submission {
   timestamp: string
   team: string
   technician: string
-  client: ClientType
   date: string
   startTime: string
   endTime: string
@@ -52,21 +49,17 @@ export interface Submission {
   comments: string
   supportTeam: string
   photos: Record<string, string[]>
-  // GFP
-  orderNumber?: string
-  buildingType?: string
-  // WC
   ha?: string
   units?: string
   variant?: string
   protocols?: string[]
+  protocolFiles?: string[]
   ne4Checklist?: string[]
   apInstalled?: 'yes' | 'no'
   weData?: WeData[]
   validation_score?: number
   validation_details?: string
   pendingSync?: boolean
-  // Cita link
   citaId?: string
 }
 
@@ -119,13 +112,11 @@ export interface Report {
   timestamp: string
   team: string
   technician: string
-  client: string
   date: string
   startTime: string
   endTime: string
   workStatus: string
   comments: string
-  orderNumber?: string
   ha?: string
   photoCount: number
   driveUrl?: string
