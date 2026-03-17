@@ -1,5 +1,5 @@
 {
-  "generated": "2026-03-17T13:46:49.174777",
+  "generated": "2026-03-17T14:32:06.274269",
   "citas": [
     {
       "id": "2026-03-17_305685",
@@ -222,21 +222,6 @@
       "cp": "32676",
       "ciudad": "Lügde",
       "titulo": " 2 TK Umtelkomd - Installation - HA281328",
-      "equipo": "",
-      "status": "libre",
-      "linkDocs": ""
-    },
-    {
-      "id": "2026-03-27_1053638",
-      "fecha": "2026-03-27",
-      "ha": "HA1053638",
-      "tecnicos": 3,
-      "inicio": "08:00",
-      "fin": "14:00",
-      "calle": "Burtonstraße 33",
-      "cp": "49328",
-      "ciudad": "Melle",
-      "titulo": "3 TK  Umtelkomd Installation 2 HA1053638",
       "equipo": "",
       "status": "libre",
       "linkDocs": ""
