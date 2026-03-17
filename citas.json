@@ -1,5 +1,5 @@
 {
-  "generated": "2026-03-17T09:46:45.468123",
+  "generated": "2026-03-17T10:01:36.620748",
   "citas": [
     {
       "id": "2026-03-17_305685",
@@ -132,6 +132,21 @@
       "cp": "49143",
       "ciudad": "Bissendorf",
       "titulo": "3 TK Umtelkomd - Installation - HA754702",
+      "equipo": "",
+      "status": "libre",
+      "linkDocs": ""
+    },
+    {
+      "id": "2026-03-23_305685",
+      "fecha": "2026-03-23",
+      "ha": "HA305685",
+      "tecnicos": 0,
+      "inicio": "15:00",
+      "fin": "16:30",
+      "calle": "Kirchstraße 6",
+      "cp": "49584",
+      "ciudad": "Fürstenau",
+      "titulo": "TK 2 Umtelkomd - 3.Installation - HA305685 nur ONT im Keller",
       "equipo": "",
       "status": "libre",
       "linkDocs": ""
