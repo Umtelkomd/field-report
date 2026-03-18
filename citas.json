@@ -1,36 +1,6 @@
 {
-  "generated": "2026-03-17T20:47:02.468597",
+  "generated": "2026-03-18T06:01:56.795072",
   "citas": [
-    {
-      "id": "2026-03-17_305685",
-      "fecha": "2026-03-17",
-      "ha": "HA305685",
-      "tecnicos": 0,
-      "inicio": "08:00",
-      "fin": "17:00",
-      "calle": "Kirchstraße 6",
-      "cp": "49584",
-      "ciudad": "Fürstenau",
-      "titulo": "TK 2 Umtelkomd - 3.Installation - HA305685",
-      "equipo": "",
-      "status": "libre",
-      "linkDocs": ""
-    },
-    {
-      "id": "2026-03-17_252713",
-      "fecha": "2026-03-17",
-      "ha": "HA252713",
-      "tecnicos": 4,
-      "inicio": "08:00",
-      "fin": "17:00",
-      "calle": "Alt Riemsloh 1 A",
-      "cp": "49328",
-      "ciudad": "Melle",
-      "titulo": "4 TK Umtelkomd - Installation - HA252713",
-      "equipo": "",
-      "status": "libre",
-      "linkDocs": ""
-    },
     {
       "id": "2026-03-18_920962",
       "fecha": "2026-03-18",
@@ -237,6 +207,21 @@
       "cp": "33428",
       "ciudad": "Harsewinkel",
       "titulo": "4 TK Umtelkomd - Installation - HA485960",
+      "equipo": "",
+      "status": "libre",
+      "linkDocs": ""
+    },
+    {
+      "id": "2026-03-30_486988",
+      "fecha": "2026-03-30",
+      "ha": "HA486988",
+      "tecnicos": 2,
+      "inicio": "08:00",
+      "fin": "14:00",
+      "calle": "Franz-Claas-Straße 12",
+      "cp": "33428",
+      "ciudad": "Harsewinkel",
+      "titulo": "2 TK Umtelkomd - Installation - HA486988 ",
       "equipo": "",
       "status": "libre",
       "linkDocs": ""
