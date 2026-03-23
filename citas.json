@@ -1,5 +1,5 @@
 {
-  "generated": "2026-03-23T10:16:51.932603",
+  "generated": "2026-03-23T10:32:02.884644",
   "citas": [
     {
       "id": "2026-03-23_755020",
@@ -72,6 +72,21 @@
       "cp": "49565",
       "ciudad": "Bramsche",
       "titulo": " 2 TK Umtelkomd - Installation - HA1314521",
+      "equipo": "",
+      "status": "libre",
+      "linkDocs": ""
+    },
+    {
+      "id": "2026-03-24_754702",
+      "fecha": "2026-03-24",
+      "ha": "HA754702",
+      "tecnicos": 3,
+      "inicio": "08:00",
+      "fin": "17:00",
+      "calle": "Pundmanns Breite 4",
+      "cp": "49143",
+      "ciudad": "Bissendorf",
+      "titulo": "3 TK Umtelkomd - Installation - HA754702",
       "equipo": "",
       "status": "libre",
       "linkDocs": ""
