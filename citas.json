@@ -1,21 +1,6 @@
 {
-  "generated": "2026-03-27T20:46:13.877147",
+  "generated": "2026-03-28T06:01:25.896869",
   "citas": [
-    {
-      "id": "2026-03-27_485960",
-      "fecha": "2026-03-27",
-      "ha": "HA485960",
-      "tecnicos": 4,
-      "inicio": "08:00",
-      "fin": "17:00",
-      "calle": "August-Claas-Straße 24",
-      "cp": "33428",
-      "ciudad": "Harsewinkel",
-      "titulo": "4 TK Umtelkomd - Installation - HA485960",
-      "equipo": "",
-      "status": "libre",
-      "linkDocs": ""
-    },
     {
       "id": "2026-03-30_763631",
       "fecha": "2026-03-30",
