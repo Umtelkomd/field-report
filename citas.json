@@ -1,21 +1,6 @@
 {
-  "generated": "2026-03-30T17:16:56.245910",
+  "generated": "2026-03-31T06:46:57.722249",
   "citas": [
-    {
-      "id": "2026-03-30_763631",
-      "fecha": "2026-03-30",
-      "ha": "HA763631",
-      "tecnicos": 3,
-      "inicio": "08:00",
-      "fin": "17:00",
-      "calle": "Maikottenweg 98",
-      "cp": "48155",
-      "ciudad": "Münster",
-      "titulo": "3 TK Umtelkomd - Installation - HA763631",
-      "equipo": "",
-      "status": "libre",
-      "linkDocs": ""
-    },
     {
       "id": "2026-03-31_707863",
       "fecha": "2026-03-31",
@@ -132,6 +117,21 @@
       "cp": "33014",
       "ciudad": "Bad Driburg",
       "titulo": "2 TK Umtelkomd - 2.Installation - HA708588",
+      "equipo": "",
+      "status": "libre",
+      "linkDocs": ""
+    },
+    {
+      "id": "2026-04-09_490405",
+      "fecha": "2026-04-09",
+      "ha": "HA490405",
+      "tecnicos": 2,
+      "inicio": "08:00",
+      "fin": "11:00",
+      "calle": "Zunftstraße 18 (Zunftstraße 18,",
+      "cp": "33428",
+      "ciudad": "Harsewinkel  Nordrhein-Westfalen)",
+      "titulo": "2 TK Umtelkomd Installation-HA490405",
       "equipo": "",
       "status": "libre",
       "linkDocs": ""
