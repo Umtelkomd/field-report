@@ -1,21 +1,6 @@
 {
-  "generated": "2026-04-01T17:17:15.743693",
+  "generated": "2026-04-02T09:16:53.665038",
   "citas": [
-    {
-      "id": "2026-04-01_409013",
-      "fecha": "2026-04-01",
-      "ha": "HA409013",
-      "tecnicos": 3,
-      "inicio": "08:00",
-      "fin": "15:00",
-      "calle": "Stiepenweg 57",
-      "cp": "34414",
-      "ciudad": "Warburg",
-      "titulo": "3 TK Umtelkomd - Installation - HA409013",
-      "equipo": "",
-      "status": "libre",
-      "linkDocs": ""
-    },
     {
       "id": "2026-04-02_212990",
       "fecha": "2026-04-02",
@@ -117,6 +102,21 @@
       "cp": "32676",
       "ciudad": "Lügde",
       "titulo": "2 TK Umtelkomd - Installation - HA281877",
+      "equipo": "",
+      "status": "libre",
+      "linkDocs": ""
+    },
+    {
+      "id": "2026-04-10_755764",
+      "fecha": "2026-04-10",
+      "ha": "HA755764",
+      "tecnicos": 3,
+      "inicio": "15:00",
+      "fin": "17:00",
+      "calle": "Bergstraße 17 D",
+      "cp": "49143",
+      "ciudad": "Bissendorf",
+      "titulo": "3 TK Umtelkomd -3. Installation - HA755764",
       "equipo": "",
       "status": "libre",
       "linkDocs": ""
